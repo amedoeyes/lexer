@@ -1,0 +1,84 @@
+{
+  "company": {
+    "name": "Tech Innovators Inc.",
+    "founded": 2010,
+    "locations": [
+      {
+        "city": "San Francisco",
+        "state": "California",
+        "employees": 1200
+      },
+      {
+        "city": "New York",
+        "state": "New York",
+        "employees": 800
+      }
+    ],
+    "departments": [
+      {
+        "id": 1,
+        "name": "Engineering",
+        "budget": 1500000,
+        "head": "Alice Johnson",
+        "projects": [
+          {
+            "project_id": "E-123",
+            "name": "AI Research",
+            "status": "ongoing",
+            "start_date": "2023-01-15"
+          },
+          {
+            "project_id": "E-124",
+            "name": "Blockchain Integration",
+            "status": "completed",
+            "end_date": "2024-05-10"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Marketing",
+        "budget": 800000,
+        "head": "Bob Smith",
+        "campaigns": [
+          {
+            "campaign_id": "M-001",
+            "title": "Launch 2024",
+            "channels": ["social_media", "email", "web"],
+            "budget": 200000
+          }
+        ]
+      }
+    ]
+  },
+  "products": [
+    {
+      "id": 1001,
+      "name": "SmartWidget Pro",
+      "category": "Gadgets",
+      "price": 299.99,
+      "availability": {
+        "online": null,
+        "in_stores": ["San Francisco", "New York"]
+      }
+    },
+    {
+      "id": 1002,
+      "name": "Home Automation Kit",
+      "category": "Smart Home",
+      "price": 499.99,
+      "availability": {
+        "online": true,
+        "in_stores": []
+      }
+    }
+  ],
+  "settings": {
+    "theme": "dark",
+    "notifications": {
+      "email": true,
+      "sms": false
+    },
+    "language": "en-US"
+  }
+}
