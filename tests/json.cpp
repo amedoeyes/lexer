@@ -121,74 +121,75 @@ void print_json_value(const json_value& value, int indent = 0) {
 // TODO: make this a parser object
 // TODO: somehow make the object generic
 static auto parse_json(std::span<lexer::token<token_type>> tokens, size_t& pos) -> json_value {
-	if (pos >= tokens.size()) throw std::runtime_error("");
+	auto throw_syntax_error = [&](std::string_view message) {
+		if (pos < tokens.size()) {
+			const auto& token = tokens[pos];
+			throw std::runtime_error(std::format("{}:{}: {}", token.line, token.column, message));
+		}
+		throw std::runtime_error(std::format("unexpected end of input: {}", message));
+	};
+	if (pos >= tokens.size()) throw_syntax_error("unexpected end of input");
 	const auto& token = tokens[pos];
 	++pos;
 	switch (token.type) {
 		using enum token_type;
 		case string: return json_string{token.value};
-		case number: return json_number{std::stod(token.value)};
+		case number: try { return json_number{std::stod(token.value)};
+			} catch (const std::exception&) {
+				throw_syntax_error("invalid number format");
+			}
 		case boolean: return json_boolean{token.value == "true"};
 		case null: return json_null{};
 		case lbrace: {
 			auto object = json_object{};
-			while (pos < tokens.size() && tokens[pos].type != rbrace) {
-				if (tokens[pos].type != string) {
-					throw std::runtime_error(std::format("{}:{}: expected string key", tokens[pos].line, tokens[pos].column));
+			bool expecting_key = true;
+			while (pos < tokens.size()) {
+				if (tokens[pos].type == rbrace) {
+					if (tokens[pos - 1].type == comma) throw_syntax_error("trailing comma");
+					++pos;
+					return object;
 				}
-				auto key = tokens[pos].value;
+				if (!expecting_key) throw_syntax_error("expected comma");
+				if (tokens[pos].type != string) throw_syntax_error("expected string key");
+				const auto& key = tokens[pos].value;
 				++pos;
-				if (pos >= tokens.size() || tokens[pos].type != colon) {
-					throw std::runtime_error(std::format("{}:{}: expected colon", tokens[pos - 1].line, tokens[pos - 1].column));
-				}
+				if (pos >= tokens.size() || tokens[pos].type != colon) throw_syntax_error("expected colon");
 				++pos;
 				object[key] = parse_json(tokens, pos);
-				if (pos < tokens.size() && tokens[pos].type == rbrace) break;
-				if (pos >= tokens.size() || tokens[pos].type != comma) {
-					throw std::runtime_error(std::format("{}:{}: expected comma", tokens[pos - 1].line, tokens[pos - 1].column));
+				expecting_key = false;
+				if (pos < tokens.size() && tokens[pos].type == comma) {
+					++pos;
+					expecting_key = true;
 				}
-				++pos;
 			}
-			if (pos >= tokens.size() || tokens[pos].type != rbrace) {
-				throw std::runtime_error(
-					std::format("{}:{}: expected closing brace", tokens[pos - 1].line, tokens[pos - 1].column)
-				);
-			}
-			if (tokens[pos - 1].type == comma) {
-				throw std::runtime_error(std::format("{}:{}: trailing comma", tokens[pos - 1].line, tokens[pos - 1].column));
-			}
-			++pos;
-			return object;
+			throw_syntax_error("expected closing brace");
 		}
 		case lbracket: {
 			auto array = json_array{};
-			while (pos < tokens.size() && tokens[pos].type != rbracket) {
-				array.emplace_back(parse_json(tokens, pos));
-				if (pos < tokens.size() && tokens[pos].type == rbracket) break;
-				if (pos >= tokens.size() || tokens[pos].type != comma) {
-					throw std::runtime_error(std::format("{}:{}: expected comma", tokens[pos - 1].line, tokens[pos - 1].column));
+			bool expecting_value = true;
+			while (pos < tokens.size()) {
+				if (tokens[pos].type == rbracket) {
+					if (tokens[pos - 1].type == comma) throw_syntax_error("trailing comma");
+					++pos;
+					return array;
 				}
-				++pos;
+				if (!expecting_value) throw_syntax_error("expected comma");
+				array.emplace_back(parse_json(tokens, pos));
+				expecting_value = false;
+				if (pos < tokens.size() && tokens[pos].type == comma) {
+					++pos;
+					expecting_value = true;
+				}
 			}
-			if (pos >= tokens.size() || tokens[pos].type != rbracket) {
-				throw std::runtime_error(
-					std::format("{}:{}: expected closing bracket", tokens[pos - 1].line, tokens[pos - 1].column)
-				);
-			}
-			if (tokens[pos - 1].type == comma) {
-				throw std::runtime_error(std::format("{}:{}: trailing comma", tokens[pos - 1].line, tokens[pos - 1].column));
-			}
-			++pos;
-			return array;
+			throw_syntax_error("expected closing bracket");
 		}
-		default:
-			throw std::runtime_error(std::format("{}:{}: unexpected token '{}'", token.line, token.column, token.value));
+		default: throw_syntax_error(std::format("unexpected token '{}'", token.value));
 	}
 	std::unreachable();
 }
 
 auto main() -> int {
-	const auto* file = "./file.json";
+	const auto* file = "./tests/file.json";
 	auto input = (std::ostringstream() << std::ifstream(file).rdbuf()).str();
 	auto lexer = lexer::lexer<token_type>(input);
 	lexer.define_token(

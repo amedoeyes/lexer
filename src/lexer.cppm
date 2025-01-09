@@ -47,13 +47,15 @@ public:
 		while (curr_ <= input_.size()) {
 			for (const auto& [matcher, tokenizer] : tokenizers_) {
 				if (matcher(curr())) {
+					const auto start_column = column();
+					const auto start_line = line();
 					try {
 						auto token = tokenizer(
 							std::bind(&lexer<T>::curr, this), std::bind(&lexer<T>::next, this), std::bind(&lexer<T>::prev, this)
 						);
 						if (!token.has_value()) continue;
-						(*token).line = line();
-						(*token).column = column() - 1;
+						(*token).line = start_line;
+						(*token).column = start_column;
 						return *token;
 					} catch (const std::runtime_error& e) {
 						throw std::runtime_error(std::format("{}:{}: {}", line(), column(), e.what()));
