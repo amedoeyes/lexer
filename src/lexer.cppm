@@ -1,8 +1,9 @@
 module;
 
+#include <cstddef>
 #include <format>
 #include <functional>
-#include <print>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -15,8 +16,48 @@ export template <typename T>
 struct token {
 	T type;
 	std::string value;
-	size_t line{};
-	size_t column{};
+	std::size_t line{};
+	std::size_t column{};
+};
+
+class context {
+public:
+	explicit context(std::string input) : input_(std::move(input)) {};
+
+	[[nodiscard]] auto curr() const -> char { return curr_ < input_.size() ? input_[curr_] : '\0'; }
+
+	auto next() -> void {
+		if (curr_ < input_.size()) {
+			if (input_[curr_] == '\n') {
+				++line_;
+				column_ = 1;
+			} else {
+				++column_;
+			}
+			++curr_;
+		}
+	}
+
+	auto prev() -> void {
+		if (curr_ > 0) {
+			--curr_;
+			if (input_[curr_] == '\n') {
+				--line_;
+				column_ = 1;
+			} else {
+				--column_;
+			}
+		}
+	}
+
+	[[nodiscard]] auto line() const -> std::size_t { return line_; }
+	[[nodiscard]] auto column() const -> std::size_t { return column_; }
+
+private:
+	std::string input_;
+	std::size_t curr_ = 0;
+	std::size_t line_ = 1;
+	std::size_t column_ = 1;
 };
 
 export template <typename T>
@@ -24,10 +65,9 @@ class lexer {
 public:
 	using token_type = token<T>;
 	using matcher_type = std::function<bool(char)>;
-	using tokenizer_type = std::function<std::optional<
-		token_type>(const std::function<char()>&, const std::function<void()>&, const std::function<void()>&)>;
+	using tokenizer_type = std::function<std::optional<token_type>(context&)>;
 
-	explicit lexer(std::string text) : input_(std::move(text)) {};
+	explicit lexer(const std::string& input) : context_(input) {};
 
 	auto define_token(const matcher_type& matcher, const tokenizer_type& tokenizer) -> void {
 		tokenizers_.emplace_back(matcher, tokenizer);
@@ -36,62 +76,41 @@ public:
 	auto define_token(T type, char ch) -> void {
 		tokenizers_.emplace_back(
 			[ch](auto c) { return c == ch; },
-			[type, ch](const auto&, const auto& next, const auto&) {
-				next();
+			[type, ch](auto& ctx) {
+				ctx.next();
 				return token_type{.type = type, .value = {ch}};
 			}
 		);
 	}
 
 	auto next_token() -> token_type {
-		while (curr_ <= input_.size()) {
+		while (context_.curr() != '\0') {
 			for (const auto& [matcher, tokenizer] : tokenizers_) {
-				if (matcher(curr())) {
-					const auto start_column = column();
-					const auto start_line = line();
+				if (matcher(context_.curr())) {
+					const auto start_column = context_.column();
+					const auto start_line = context_.line();
 					try {
-						auto token = tokenizer(
-							std::bind(&lexer<T>::curr, this), std::bind(&lexer<T>::next, this), std::bind(&lexer<T>::prev, this)
-						);
-						if (!token.has_value()) continue;
-						(*token).line = start_line;
-						(*token).column = start_column;
-						return *token;
+						auto token = tokenizer(context_);
+						if (token.has_value()) {
+							token->line = start_line;
+							token->column = start_column;
+							return *token;
+						}
 					} catch (const std::runtime_error& e) {
-						throw std::runtime_error(std::format("{}:{}: {}", line(), column(), e.what()));
+						throw std::runtime_error(std::format("{}:{}: {}", context_.line(), context_.column(), e.what()));
 					}
 				}
 			}
-			throw std::runtime_error(std::format("{}:{}: undefined matcher for character '{}'", line(), column(), curr()));
+			throw std::runtime_error(
+				std::format("{}:{}: undefined matcher for character '{}'", context_.line(), context_.column(), context_.curr())
+			);
 		}
 		std::unreachable();
 	}
 
 private:
-	std::string input_;
-	size_t curr_ = 0;
+	context context_;
 	std::vector<std::pair<matcher_type, tokenizer_type>> tokenizers_;
-
-	[[nodiscard]] auto line() const -> size_t {
-		size_t line = 1;
-		for (size_t i = 0; i < curr_; ++i) {
-			if (input_[i] == '\n') ++line;
-		}
-		return line;
-	}
-
-	[[nodiscard]] auto column() const -> size_t {
-		size_t col = 1;
-		for (size_t i = curr_; i > 0; --i) {
-			if (input_[i - 1] == '\n') break;
-			++col;
-		}
-		return col;
-	}
-
-	[[nodiscard]] auto curr() const -> char { return curr_ < input_.size() ? input_[curr_] : '\0'; }
-	auto next() -> void { ++curr_; }
-	auto prev() -> void { --curr_; }
 };
 
 } // namespace lexer

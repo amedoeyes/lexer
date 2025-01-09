@@ -1,19 +1,27 @@
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
+#include <exception>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <optional>
+#include <ostream>
 #include <print>
 #include <ranges>
+#include <span>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <variant>
+#include <vector>
 
 import lexer;
 
-enum class token_type : uint8_t {
+enum class token_type : std::uint8_t {
 	lbrace,
 	rbrace,
 	lbracket,
@@ -29,8 +37,8 @@ enum class token_type : uint8_t {
 	eof,
 };
 
-auto token_name(token_type tok) -> std::string {
-	switch (tok) {
+auto token_name(token_type token) -> std::string {
+	switch (token) {
 		using enum token_type;
 		case lbrace: return "lbrace";
 		case rbrace: return "rbrace";
@@ -44,12 +52,13 @@ auto token_name(token_type tok) -> std::string {
 		case null: return "null";
 		case eof: return "eof";
 	}
+	std::unreachable();
 }
 
 using json_number = double;
 using json_string = std::string;
 using json_boolean = bool;
-using json_null = nullptr_t;
+using json_null = std::nullptr_t;
 struct json_array;
 struct json_object;
 
@@ -65,11 +74,8 @@ struct json_object : std::unordered_map<std::string, json_value> {
 
 void print_json_value(const json_value& value, int indent = 0) {
 	auto print_indent = [](int level) {
-		for (int i = 0; i < level; ++i) {
-			std::print("    ");
-		}
+		for (int i = 0; i < level; ++i) std::print("  ");
 	};
-
 	if (std::holds_alternative<json_string>(value)) {
 		std::print("\"{}\"", std::get<json_string>(value));
 	} else if (std::holds_alternative<json_number>(value)) {
@@ -85,12 +91,10 @@ void print_json_value(const json_value& value, int indent = 0) {
 			return;
 		}
 		std::println("[");
-		for (size_t i = 0; i < arr.size(); ++i) {
+		for (std::size_t i = 0; i < arr.size(); ++i) {
 			print_indent(indent + 1);
 			print_json_value(arr[i], indent + 1);
-			if (i < arr.size() - 1) {
-				std::print(",");
-			}
+			if (i < arr.size() - 1) std::print(",");
 			std::println("");
 		}
 		print_indent(indent);
@@ -102,14 +106,12 @@ void print_json_value(const json_value& value, int indent = 0) {
 			return;
 		}
 		std::println("{{");
-		size_t i = 0;
+		std::size_t i = 0;
 		for (const auto& [key, val] : obj) {
 			print_indent(indent + 1);
 			std::print("\"{}\": ", key);
 			print_json_value(val, indent + 1);
-			if (i < obj.size() - 1) {
-				std::print(",");
-			}
+			if (i < obj.size() - 1) std::print(",");
 			std::println("");
 			i++;
 		}
@@ -120,7 +122,7 @@ void print_json_value(const json_value& value, int indent = 0) {
 
 // TODO: make this a parser object
 // TODO: somehow make the object generic
-static auto parse_json(std::span<lexer::token<token_type>> tokens, size_t& pos) -> json_value {
+static auto parse_json(std::span<lexer::token<token_type>> tokens, std::size_t& pos) -> json_value {
 	auto throw_syntax_error = [&](std::string_view message) {
 		if (pos < tokens.size()) {
 			const auto& token = tokens[pos];
@@ -194,8 +196,8 @@ auto main() -> int {
 	auto lexer = lexer::lexer<token_type>(input);
 	lexer.define_token(
 		[](auto ch) { return std::isspace(ch) != 0; },
-		[](const auto& curr, const auto& next, const auto&) {
-			while (std::isspace(curr())) next();
+		[](auto& ctx) {
+			while (std::isspace(ctx.curr())) ctx.next();
 			return std::nullopt;
 		}
 	);
@@ -208,65 +210,65 @@ auto main() -> int {
 	lexer.define_token(token_type::eof, '\0');
 	lexer.define_token(
 		[](auto ch) { return ch == '"'; },
-		[](const auto& curr, const auto& next, const auto&) {
+		[](auto& ctx) {
 			auto value = std::string();
-			next();
-			while (curr() != '"') {
-				if (curr() == '\n') {
+			ctx.next();
+			while (ctx.curr() != '"') {
+				if (ctx.curr() == '\n') {
 					throw std::runtime_error("unexpected end of string");
 				}
-				if (curr() == '\\') {
-					next();
-					if (curr() == '"' || curr() == '\\' || curr() == '/' || curr() == 'b' || curr() == 'f' || curr() == 'n'
-							|| curr() == 'r' || curr() == 't') {
+				if (ctx.curr() == '\\') {
+					ctx.next();
+					if (ctx.curr() == '"' || ctx.curr() == '\\' || ctx.curr() == '/' || ctx.curr() == 'b' || ctx.curr() == 'f'
+							|| ctx.curr() == 'n' || ctx.curr() == 'r' || ctx.curr() == 't') {
 						value += '\\';
 					} else {
 						throw std::runtime_error("invalid escape character");
 					}
 				}
-				value += curr();
-				next();
+				value += ctx.curr();
+				ctx.next();
 			}
-			next();
+			ctx.next();
 			return lexer::token{.type = token_type::string, .value = value};
 		}
 	);
 	lexer.define_token(
 		[](auto ch) { return (std::isdigit(ch) != 0); },
-		[](const auto& curr, const auto& next, const auto&) {
+		[](auto& ctx) {
 			auto value = std::string();
-			while (std::isdigit(curr()) != 0 || curr() == '.') {
-				value += curr();
-				next();
+			while (std::isdigit(ctx.curr()) != 0 || ctx.curr() == '.') {
+				value += ctx.curr();
+				ctx.next();
 			}
 			return lexer::token{.type = token_type::number, .value = value};
 		}
 	);
 	lexer.define_token(
 		[](auto ch) { return ch == 't' || ch == 'f'; },
-		[](const auto& curr, const auto& next, const auto& prev) {
+		[](auto& ctx) {
 			auto value = std::string();
-			while (std::isalpha(curr())) {
-				value += curr();
-				next();
+			while (std::isalpha(ctx.curr())) {
+				value += ctx.curr();
+				ctx.next();
 			}
 			if (value == "true" || value == "false") {
 				return std::optional<lexer::token<token_type>>{{.type = token_type::boolean, .value = value}};
 			}
-			for (auto _ : std::views::iota(0ul, value.size())) prev();
+			for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
 			return std::optional<lexer::token<token_type>>{};
 		}
 	);
 	lexer.define_token(
 		[](auto ch) { return ch == 'n'; },
-		[](const auto& curr, const auto& next, const auto& prev) {
+		[](auto& ctx) {
 			auto value = std::string();
-			while (std::isalpha(curr())) {
-				value += curr();
-				next();
+			while (std::isalpha(ctx.curr())) {
+				value += ctx.curr();
+				ctx.next();
 			}
 			if (value == "null") return std::optional<lexer::token<token_type>>{{.type = token_type::null, .value = value}};
-			for (auto _ : std::views::iota(0ul, value.size())) prev();
+			for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
 			return std::optional<lexer::token<token_type>>{};
 		}
 	);
