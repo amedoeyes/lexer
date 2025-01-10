@@ -1,24 +1,4 @@
-#include <cctype>
-#include <cstddef>
-#include <cstdint>
-#include <exception>
-#include <format>
-#include <fstream>
-#include <iostream>
-#include <optional>
-#include <ostream>
-#include <print>
-#include <ranges>
-#include <span>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <utility>
-#include <variant>
-#include <vector>
-
+import std;
 import lexer;
 
 enum class token_type : std::uint8_t {
@@ -35,6 +15,7 @@ enum class token_type : std::uint8_t {
 	null,
 
 	eof,
+	unknown,
 };
 
 auto token_name(token_type token) -> std::string {
@@ -51,6 +32,7 @@ auto token_name(token_type token) -> std::string {
 		case boolean: return "boolean";
 		case null: return "null";
 		case eof: return "eof";
+		case unknown: return "unknown";
 	}
 	std::unreachable();
 }
@@ -72,7 +54,168 @@ struct json_object : std::unordered_map<std::string, json_value> {
 	using std::unordered_map<std::string, json_value>::unordered_map;
 };
 
-void print_json_value(const json_value& value, int indent = 0) {
+class json_parser {
+public:
+	explicit json_parser(const std::string& input) : lexer_(input) {
+		lexer_.define_token(
+			[](auto ch) { return std::isspace(ch) != 0; },
+			[](auto& ctx) {
+				while (std::isspace(ctx.curr())) ctx.next();
+				return std::nullopt;
+			}
+		);
+		lexer_.define_token(token_type::lbrace, '{');
+		lexer_.define_token(token_type::rbrace, '}');
+		lexer_.define_token(token_type::lbracket, '[');
+		lexer_.define_token(token_type::rbracket, ']');
+		lexer_.define_token(token_type::colon, ':');
+		lexer_.define_token(token_type::comma, ',');
+		lexer_.define_token(token_type::eof, '\0');
+		lexer_.define_token(
+			[](auto ch) { return ch == '"'; },
+			[](auto& ctx) {
+				auto value = std::string();
+				ctx.next();
+				while (ctx.curr() != '"') {
+					if (ctx.curr() == '\n') {
+						throw std::runtime_error("unexpected end of string");
+					}
+					if (ctx.curr() == '\\') {
+						ctx.next();
+						switch (ctx.curr()) {
+							case '"':
+							case '\\':
+							case '/':
+							case 'b':
+							case 'f':
+							case 'n':
+							case 'r':
+							case 't': value += '\\'; break;
+							default: throw std::runtime_error("invalid escape character");
+						}
+					}
+					value += ctx.curr();
+					ctx.next();
+				}
+				ctx.next();
+				return lexer::token{.type = token_type::string, .value = value};
+			}
+		);
+		lexer_.define_token(
+			[](auto ch) { return (std::isdigit(ch) != 0); },
+			[](auto& ctx) {
+				auto value = std::string();
+				while (std::isdigit(ctx.curr()) != 0 || ctx.curr() == '.') {
+					value += ctx.curr();
+					ctx.next();
+				}
+				return lexer::token{.type = token_type::number, .value = value};
+			}
+		);
+		lexer_.define_token(
+			[](auto ch) { return ch == 't' || ch == 'f'; },
+			[](auto& ctx) {
+				auto value = std::string();
+				while (std::isalpha(ctx.curr())) {
+					value += ctx.curr();
+					ctx.next();
+				}
+				if (value == "true" || value == "false") {
+					return std::optional<lexer::token<token_type>>{{.type = token_type::boolean, .value = value}};
+				}
+				for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
+				return std::optional<lexer::token<token_type>>{};
+			}
+		);
+		lexer_.define_token(
+			[](auto ch) { return ch == 'n'; },
+			[](auto& ctx) {
+				auto value = std::string();
+				while (std::isalpha(ctx.curr())) {
+					value += ctx.curr();
+					ctx.next();
+				}
+				if (value == "null") return std::optional<lexer::token<token_type>>{{.type = token_type::null, .value = value}};
+				for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
+				return std::optional<lexer::token<token_type>>{};
+			}
+		);
+		lexer_.define_token(
+			[](auto) { return true; },
+			[](auto& ctx) { return lexer::token{.type = token_type::unknown, .value = {ctx.curr()}}; }
+		);
+		token_ = lexer_.next_token();
+	}
+
+	auto parse() -> json_value {
+		switch (token_.type) {
+			using enum token_type;
+			case string: return json_string{token_.value};
+			case number: {
+				try {
+					return json_number{std::stod(token_.value)};
+				} catch (const std::exception&) {
+					throw_syntax_error("invalid number format");
+				}
+			}
+			case boolean: return json_boolean{token_.value == "true"};
+			case null: return json_null{};
+			case lbrace: {
+				auto object = json_object{};
+				bool expecting_key = true;
+				token_ = lexer_.next_token();
+				while (token_.type != token_type::eof) {
+					if (token_.type == rbrace) return object;
+					if (!expecting_key) throw_syntax_error("expected comma");
+					if (token_.type != string) throw_syntax_error("expected string key");
+					const auto key = token_.value;
+					token_ = lexer_.next_token();
+					if (token_.type != colon) throw_syntax_error("expected colon");
+					token_ = lexer_.next_token();
+					object[key] = parse();
+					token_ = lexer_.next_token();
+					expecting_key = false;
+					if (token_.type == comma) {
+						token_ = lexer_.next_token();
+						expecting_key = true;
+					}
+				}
+				throw_syntax_error("expected closing brace");
+			}
+			case lbracket: {
+				auto array = json_array{};
+				bool expecting_value = true;
+				token_ = lexer_.next_token();
+				while (token_.type != token_type::eof) {
+					if (token_.type == rbracket) return array;
+					if (!expecting_value) throw_syntax_error("expected comma");
+					array.emplace_back(parse());
+					token_ = lexer_.next_token();
+					expecting_value = false;
+					if (token_.type == comma) {
+						token_ = lexer_.next_token();
+						expecting_value = true;
+					}
+				}
+				throw_syntax_error("expected closing bracket");
+			}
+			case eof: throw_syntax_error("unexpected end of input");
+			case unknown: throw_syntax_error(std::format("unknown token '{}'", token_.value));
+			default: throw_syntax_error(std::format("unexpected token '{}'", token_.value));
+		}
+		std::unreachable();
+	}
+
+private:
+	lexer::lexer<token_type> lexer_;
+	lexer::token<token_type> token_;
+
+	auto throw_syntax_error(std::string_view message) -> void {
+		throw std::runtime_error(std::format("{}:{}: {}", token_.line, token_.column, message));
+	}
+};
+
+void print_json_value(const json_value& value, std::int32_t indent = 0) {
 	auto print_indent = [](int level) {
 		for (int i = 0; i < level; ++i) std::print("  ");
 	};
@@ -120,180 +263,12 @@ void print_json_value(const json_value& value, int indent = 0) {
 	}
 }
 
-// TODO: make this a parser object
-// TODO: somehow make the object generic
-static auto parse_json(std::span<lexer::token<token_type>> tokens, std::size_t& pos) -> json_value {
-	auto throw_syntax_error = [&](std::string_view message) {
-		if (pos < tokens.size()) {
-			const auto& token = tokens[pos];
-			throw std::runtime_error(std::format("{}:{}: {}", token.line, token.column, message));
-		}
-		throw std::runtime_error(std::format("unexpected end of input: {}", message));
-	};
-	if (pos >= tokens.size()) throw_syntax_error("unexpected end of input");
-	const auto& token = tokens[pos];
-	++pos;
-	switch (token.type) {
-		using enum token_type;
-		case string: return json_string{token.value};
-		case number: try { return json_number{std::stod(token.value)};
-			} catch (const std::exception&) {
-				throw_syntax_error("invalid number format");
-			}
-		case boolean: return json_boolean{token.value == "true"};
-		case null: return json_null{};
-		case lbrace: {
-			auto object = json_object{};
-			bool expecting_key = true;
-			while (pos < tokens.size()) {
-				if (tokens[pos].type == rbrace) {
-					if (tokens[pos - 1].type == comma) throw_syntax_error("trailing comma");
-					++pos;
-					return object;
-				}
-				if (!expecting_key) throw_syntax_error("expected comma");
-				if (tokens[pos].type != string) throw_syntax_error("expected string key");
-				const auto& key = tokens[pos].value;
-				++pos;
-				if (pos >= tokens.size() || tokens[pos].type != colon) throw_syntax_error("expected colon");
-				++pos;
-				object[key] = parse_json(tokens, pos);
-				expecting_key = false;
-				if (pos < tokens.size() && tokens[pos].type == comma) {
-					++pos;
-					expecting_key = true;
-				}
-			}
-			throw_syntax_error("expected closing brace");
-		}
-		case lbracket: {
-			auto array = json_array{};
-			bool expecting_value = true;
-			while (pos < tokens.size()) {
-				if (tokens[pos].type == rbracket) {
-					if (tokens[pos - 1].type == comma) throw_syntax_error("trailing comma");
-					++pos;
-					return array;
-				}
-				if (!expecting_value) throw_syntax_error("expected comma");
-				array.emplace_back(parse_json(tokens, pos));
-				expecting_value = false;
-				if (pos < tokens.size() && tokens[pos].type == comma) {
-					++pos;
-					expecting_value = true;
-				}
-			}
-			throw_syntax_error("expected closing bracket");
-		}
-		default: throw_syntax_error(std::format("unexpected token '{}'", token.value));
-	}
-	std::unreachable();
-}
-
 auto main() -> int {
 	const auto* file = "./tests/file.json";
 	auto input = (std::ostringstream() << std::ifstream(file).rdbuf()).str();
-	auto lexer = lexer::lexer<token_type>(input);
-	lexer.define_token(
-		[](auto ch) { return std::isspace(ch) != 0; },
-		[](auto& ctx) {
-			while (std::isspace(ctx.curr())) ctx.next();
-			return std::nullopt;
-		}
-	);
-	lexer.define_token(token_type::lbrace, '{');
-	lexer.define_token(token_type::rbrace, '}');
-	lexer.define_token(token_type::lbracket, '[');
-	lexer.define_token(token_type::rbracket, ']');
-	lexer.define_token(token_type::colon, ':');
-	lexer.define_token(token_type::comma, ',');
-	lexer.define_token(token_type::eof, '\0');
-	lexer.define_token(
-		[](auto ch) { return ch == '"'; },
-		[](auto& ctx) {
-			auto value = std::string();
-			ctx.next();
-			while (ctx.curr() != '"') {
-				if (ctx.curr() == '\n') {
-					throw std::runtime_error("unexpected end of string");
-				}
-				if (ctx.curr() == '\\') {
-					ctx.next();
-					if (ctx.curr() == '"' || ctx.curr() == '\\' || ctx.curr() == '/' || ctx.curr() == 'b' || ctx.curr() == 'f'
-							|| ctx.curr() == 'n' || ctx.curr() == 'r' || ctx.curr() == 't') {
-						value += '\\';
-					} else {
-						throw std::runtime_error("invalid escape character");
-					}
-				}
-				value += ctx.curr();
-				ctx.next();
-			}
-			ctx.next();
-			return lexer::token{.type = token_type::string, .value = value};
-		}
-	);
-	lexer.define_token(
-		[](auto ch) { return (std::isdigit(ch) != 0); },
-		[](auto& ctx) {
-			auto value = std::string();
-			while (std::isdigit(ctx.curr()) != 0 || ctx.curr() == '.') {
-				value += ctx.curr();
-				ctx.next();
-			}
-			return lexer::token{.type = token_type::number, .value = value};
-		}
-	);
-	lexer.define_token(
-		[](auto ch) { return ch == 't' || ch == 'f'; },
-		[](auto& ctx) {
-			auto value = std::string();
-			while (std::isalpha(ctx.curr())) {
-				value += ctx.curr();
-				ctx.next();
-			}
-			if (value == "true" || value == "false") {
-				return std::optional<lexer::token<token_type>>{{.type = token_type::boolean, .value = value}};
-			}
-			for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
-			return std::optional<lexer::token<token_type>>{};
-		}
-	);
-	lexer.define_token(
-		[](auto ch) { return ch == 'n'; },
-		[](auto& ctx) {
-			auto value = std::string();
-			while (std::isalpha(ctx.curr())) {
-				value += ctx.curr();
-				ctx.next();
-			}
-			if (value == "null") return std::optional<lexer::token<token_type>>{{.type = token_type::null, .value = value}};
-			for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
-			return std::optional<lexer::token<token_type>>{};
-		}
-	);
-
-	auto tokens = std::vector<lexer::token<token_type>>();
-
 	try {
-		auto token = lexer.next_token();
-		while (token.type != token_type::eof) {
-			tokens.emplace_back(token);
-			token = lexer.next_token();
-		}
-	} catch (const std::runtime_error& e) {
-		std::println(std::cerr, "{}:{}", file, e.what());
-		return 1;
-	}
-
-	try {
-		auto pos = 0ul;
-		auto json = parse_json(tokens, pos);
-		if (pos < tokens.size()) {
-			const auto& token = tokens[pos];
-			std::println(std::cerr, "{}:{}:{} expected end of file", file, token.line, token.column);
-			return 1;
-		}
+		auto parser = json_parser(input);
+		auto json = parser.parse();
 		print_json_value(json);
 	} catch (const std::runtime_error& e) {
 		std::println(std::cerr, "{}:{}", file, e.what());

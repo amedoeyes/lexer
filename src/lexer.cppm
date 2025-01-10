@@ -1,18 +1,10 @@
-module;
-
-#include <cstddef>
-#include <format>
-#include <functional>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <utility>
-
 export module lexer;
 
-namespace lexer {
+import std;
 
-export template <typename T>
+export namespace lexer {
+
+template <typename T>
 struct token {
 	T type;
 	std::string value;
@@ -60,7 +52,7 @@ private:
 	std::size_t column_ = 1;
 };
 
-export template <typename T>
+template <typename T>
 class lexer {
 public:
 	using token_type = token<T>;
