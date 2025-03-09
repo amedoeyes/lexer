@@ -23,6 +23,7 @@ public:
 	auto next() -> void {
 		if (curr_ < input_.size()) {
 			if (input_[curr_] == '\n') {
+				line_lengths_[line_] = column_;
 				++line_;
 				column_ = 1;
 			} else {
@@ -37,7 +38,7 @@ public:
 			--curr_;
 			if (input_[curr_] == '\n') {
 				--line_;
-				column_ = 1;
+				column_ = line_lengths_[line_];
 			} else {
 				--column_;
 			}
@@ -52,6 +53,7 @@ private:
 	std::size_t curr_ = 0;
 	std::size_t line_ = 1;
 	std::size_t column_ = 1;
+	std::unordered_map<std::size_t, std::size_t> line_lengths_;
 };
 
 template <typename T>
