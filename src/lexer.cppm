@@ -8,8 +8,11 @@ template <typename T>
 struct token {
 	T type;
 	std::string value;
-	std::size_t line{};
-	std::size_t column{};
+	std::string lexeme;
+	std::size_t start_column{};
+	std::size_t end_column{};
+	std::size_t start_line{};
+	std::size_t end_line{};
 };
 
 class context {
@@ -84,8 +87,10 @@ public:
 					try {
 						auto token = tokenizer(context_);
 						if (token.has_value()) {
-							token->line = start_line;
-							token->column = start_column;
+							token->start_line = start_line;
+							token->start_column = start_column;
+							token->end_column = context_.column();
+							token->end_line = context_.line();
 							return *token;
 						}
 					} catch (const std::runtime_error& e) {
