@@ -12,6 +12,6 @@ target("lexer", function()
 	add_files("src/**.cppm", { public = true })
 end)
 
-for _, file in ipairs(os.files("tests/**.cpp")) do
+for _, file in ipairs(os.files("examples/**.cpp")) do
 	target(path.basename(file), { files = file, deps = "lexer" })
 end

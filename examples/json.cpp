@@ -74,7 +74,7 @@ public:
 		lexer_.define_token(
 			[](auto ch) { return ch == '"'; },
 			[](auto& ctx) {
-				auto value = std::string();
+				auto lexeme = std::string();
 				ctx.next();
 				while (ctx.curr() != '"') {
 					if (ctx.curr() == '\n') {
@@ -90,59 +90,60 @@ public:
 							case 'f':
 							case 'n':
 							case 'r':
-							case 't': value += '\\'; break;
+							case 't': lexeme += '\\'; break;
 							default: throw std::runtime_error("invalid escape character");
 						}
 					}
-					value += ctx.curr();
+					lexeme += ctx.curr();
 					ctx.next();
 				}
 				ctx.next();
-				return lexer::token{.type = token_type::string, .value = value};
+				return lexer::token{.type = token_type::string, .lexeme = lexeme};
 			}
 		);
 		lexer_.define_token(
 			[](auto ch) { return (std::isdigit(ch) != 0); },
 			[](auto& ctx) {
-				auto value = std::string();
+				auto lexeme = std::string();
 				while (std::isdigit(ctx.curr()) != 0 || ctx.curr() == '.') {
-					value += ctx.curr();
+					lexeme += ctx.curr();
 					ctx.next();
 				}
-				return lexer::token{.type = token_type::number, .value = value};
+				return lexer::token{.type = token_type::number, .lexeme = lexeme};
 			}
 		);
 		lexer_.define_token(
 			[](auto ch) { return ch == 't' || ch == 'f'; },
 			[](auto& ctx) {
-				auto value = std::string();
+				auto lexeme = std::string();
 				while (std::isalpha(ctx.curr())) {
-					value += ctx.curr();
+					lexeme += ctx.curr();
 					ctx.next();
 				}
-				if (value == "true" || value == "false") {
-					return std::optional<lexer::token<token_type>>{{.type = token_type::boolean, .value = value}};
+				if (lexeme == "true" || lexeme == "false") {
+					return std::optional<lexer::token<token_type>>{{.type = token_type::boolean, .lexeme = lexeme}};
 				}
-				for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
+				for (auto _ : std::views::iota(0ul, lexeme.size())) ctx.prev();
 				return std::optional<lexer::token<token_type>>{};
 			}
 		);
 		lexer_.define_token(
 			[](auto ch) { return ch == 'n'; },
 			[](auto& ctx) {
-				auto value = std::string();
+				auto lexeme = std::string();
 				while (std::isalpha(ctx.curr())) {
-					value += ctx.curr();
+					lexeme += ctx.curr();
 					ctx.next();
 				}
-				if (value == "null") return std::optional<lexer::token<token_type>>{{.type = token_type::null, .value = value}};
-				for (auto _ : std::views::iota(0ul, value.size())) ctx.prev();
+				if (lexeme == "null")
+					return std::optional<lexer::token<token_type>>{{.type = token_type::null, .lexeme = lexeme}};
+				for (auto _ : std::views::iota(0ul, lexeme.size())) ctx.prev();
 				return std::optional<lexer::token<token_type>>{};
 			}
 		);
 		lexer_.define_token(
 			[](auto) { return true; },
-			[](auto& ctx) { return lexer::token{.type = token_type::unknown, .value = {ctx.curr()}}; }
+			[](auto& ctx) { return lexer::token{.type = token_type::unknown, .lexeme = {ctx.curr()}}; }
 		);
 		token_ = lexer_.next_token();
 	}
@@ -150,15 +151,15 @@ public:
 	auto parse() -> json_value {
 		switch (token_.type) {
 			using enum token_type;
-			case string: return json_string{token_.value};
+			case string: return json_string{token_.lexeme};
 			case number: {
 				try {
-					return json_number{std::stod(token_.value)};
+					return json_number{std::stod(token_.lexeme)};
 				} catch (const std::exception&) {
 					throw_syntax_error("invalid number format");
 				}
 			}
-			case boolean: return json_boolean{token_.value == "true"};
+			case boolean: return json_boolean{token_.lexeme == "true"};
 			case null: return json_null{};
 			case lbrace: {
 				auto object = json_object{};
@@ -168,7 +169,7 @@ public:
 					if (token_.type == rbrace) return object;
 					if (!expecting_key) throw_syntax_error("expected comma");
 					if (token_.type != string) throw_syntax_error("expected string key");
-					const auto key = token_.value;
+					const auto key = token_.lexeme;
 					token_ = lexer_.next_token();
 					if (token_.type != colon) throw_syntax_error("expected colon");
 					token_ = lexer_.next_token();
@@ -200,8 +201,8 @@ public:
 				throw_syntax_error("expected closing bracket");
 			}
 			case eof: throw_syntax_error("unexpected end of input");
-			case unknown: throw_syntax_error(std::format("unknown token '{}'", token_.value));
-			default: throw_syntax_error(std::format("unexpected token '{}'", token_.value));
+			case unknown: throw_syntax_error(std::format("unknown token '{}'", token_.lexeme));
+			default: throw_syntax_error(std::format("unexpected token '{}'", token_.lexeme));
 		}
 		std::unreachable();
 	}
@@ -211,7 +212,7 @@ private:
 	lexer::token<token_type> token_;
 
 	auto throw_syntax_error(std::string_view message) -> void {
-		throw std::runtime_error(std::format("{}:{}: {}", token_.line, token_.column, message));
+		throw std::runtime_error(std::format("{}:{}: {}", token_.end_line, token_.end_column, message));
 	}
 };
 
@@ -263,15 +264,25 @@ void print_json_value(const json_value& value, std::int32_t indent = 0) {
 	}
 }
 
-auto main() -> int {
-	const auto* file = "./tests/file.json";
-	auto input = (std::ostringstream() << std::ifstream(file).rdbuf()).str();
+auto main(int argc, char** argv) -> int {
+	auto args = std::span(argv, argc);
+	if (args.size() < 2) {
+		std::println("usage: {} <file>", args[0]);
+		return 1;
+	}
+	auto file = std::ifstream{args[1]};
+	if (!file) {
+		std::println("failed to open file '{}'", args[1]);
+		return 1;
+	}
 	try {
-		auto parser = json_parser(input);
+		auto buffer = std::ostringstream{};
+		buffer << file.rdbuf();
+		auto parser = json_parser(buffer.str());
 		auto json = parser.parse();
 		print_json_value(json);
-	} catch (const std::runtime_error& e) {
-		std::println(std::cerr, "{}:{}", file, e.what());
+	} catch (const std::exception& e) {
+		std::println(std::cerr, "Error in '{}': {}", args[1], e.what());
 		return 1;
 	}
 }
