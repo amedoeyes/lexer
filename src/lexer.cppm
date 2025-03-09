@@ -7,7 +7,6 @@ export namespace lexer {
 template <typename T>
 struct token {
 	T type;
-	std::string value;
 	std::string lexeme;
 	std::size_t start_column{};
 	std::size_t end_column{};
@@ -73,7 +72,7 @@ public:
 			[ch](auto c) { return c == ch; },
 			[type, ch](auto& ctx) {
 				ctx.next();
-				return token_type{.type = type, .value = {ch}};
+				return token_type{.type = type, .lexeme = {ch}};
 			}
 		);
 	}
