@@ -79,6 +79,19 @@ public:
 		);
 	}
 
+	auto define_token(T type, std::string_view str) -> void {
+		tokenizers_.emplace_back(
+			[str](auto c) { return str.starts_with(c); },
+			[type, str](auto& ctx) -> std::optional<token_type> {
+				if (str == ctx.substr(str.size())) {
+					ctx.next(str.size());
+					return token_type{.type = type, .lexeme = std::string{str}};
+				}
+				return std::nullopt;
+			}
+		);
+	}
+
 	auto next_token() -> token_type {
 		while (context_.curr() != '\0') {
 			for (const auto& [matcher, tokenizer] : tokenizers_) {
