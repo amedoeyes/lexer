@@ -75,54 +75,47 @@ public:
 		tokenizers_.emplace_back(matcher, tokenizer);
 	}
 
-	auto define_token(T type, char ch) -> void {
-		tokenizers_.emplace_back(
-			[ch](auto c) { return c == ch; },
-			[type, ch](auto& ctx) {
+	auto define_token(T type, char chr) -> void {
+		definitions_.emplace_back(
+			[chr](auto ch) { return ch == chr; },
+			[type, chr](auto& ctx) {
 				ctx.next();
-				return token_type{.type = type, .lexeme = {ch}};
+				return token{type, chr};
 			}
 		);
 	}
 
 	auto define_token(T type, std::string_view str) -> void {
-		tokenizers_.emplace_back(
+		definitions_.emplace_back(
 			[str](auto c) { return str.starts_with(c); },
-			[type, str](auto& ctx) -> std::optional<token_type> {
+			[type, str](auto& ctx) -> token_result<T> {
 				if (str == ctx.substr(str.size())) {
 					ctx.next(str.size());
-					return token_type{.type = type, .lexeme = std::string{str}};
+					return token{type, str};
 				}
 				return std::nullopt;
 			}
 		);
 	}
 
-	auto next_token() -> token_type {
-		while (context_.curr() != '\0') {
-			for (const auto& [matcher, tokenizer] : tokenizers_) {
-				if (matcher(context_.curr())) {
-					const auto start_column = context_.column();
-					const auto start_line = context_.line();
-					try {
-						auto token = tokenizer(context_);
-						if (token.has_value()) {
-							token->start_line = start_line;
-							token->start_column = start_column;
-							token->end_column = context_.column();
-							token->end_line = context_.line();
-							return *token;
-						}
-					} catch (const std::runtime_error& e) {
-						throw std::runtime_error(std::format("{}:{}: {}", context_.line(), context_.column(), e.what()));
-					}
+	auto next_token() -> std::expected<token<T>, std::string> {
+		for (const auto& [matcher, tokenizer] : tokenizers_) {
+			if (matcher(context_.curr())) {
+				const auto start_column = context_.column();
+				const auto start_line = context_.line();
+				auto result = tokenizer(context_);
+				if (!result) return std::unexpected(result.error());
+				auto token = *result;
+				if (token.has_value()) {
+					token->start_line = start_line;
+					token->start_column = start_column;
+					token->end_column = context_.column() - 1;
+					token->end_line = context_.line();
+					return *token;
 				}
 			}
-			throw std::runtime_error(
-				std::format("{}:{}: undefined matcher for character '{}'", context_.line(), context_.column(), context_.curr())
-			);
 		}
-		std::unreachable();
+		return std::unexpected(std::format("undefined matcher for character '{}'", context_.curr()));
 	}
 
 private:
