@@ -14,11 +14,13 @@ struct token {
 	std::size_t end_line{};
 };
 
+constexpr auto end_of_file = char(-1);
+
 class context {
 public:
 	explicit context(std::string input) : input_(std::move(input)) {};
 
-	[[nodiscard]] auto curr() const -> char { return curr_ < input_.size() ? input_[curr_] : '\0'; }
+	[[nodiscard]] auto curr() const -> char { return curr_ < input_.size() ? input_[curr_] : end_of_file; }
 
 	auto next(std::size_t n = 1) -> void {
 		for (; n > 0 && curr_ < input_.size(); --n, ++curr_) {
