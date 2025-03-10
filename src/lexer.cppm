@@ -20,29 +20,30 @@ public:
 
 	[[nodiscard]] auto curr() const -> char { return curr_ < input_.size() ? input_[curr_] : '\0'; }
 
-	auto next() -> void {
-		if (curr_ < input_.size()) {
+	auto next(std::size_t n = 1) -> void {
+		for (; n > 0 && curr_ < input_.size(); --n, ++curr_) {
 			if (input_[curr_] == '\n') {
-				line_lengths_[line_] = column_;
 				++line_;
 				column_ = 1;
 			} else {
 				++column_;
 			}
-			++curr_;
 		}
 	}
 
-	auto prev() -> void {
-		if (curr_ > 0) {
-			--curr_;
-			if (input_[curr_] == '\n') {
+	auto prev(std::size_t n = 1) -> void {
+		for (; n > 0 && curr_ > 0; --n, --curr_) {
+			if (input_[curr_ - 1] == '\n') {
 				--line_;
-				column_ = line_lengths_[line_];
+				column_ = (line_ == 1) ? curr_ : (curr_ - input_.rfind('\n', curr_ - 2));
 			} else {
 				--column_;
 			}
 		}
+	}
+
+	[[nodiscard]] auto substr(std::size_t end) const -> std::string_view {
+		return std::string_view(input_).substr(curr_, std::min(end, input_.size() - curr_));
 	}
 
 	[[nodiscard]] auto line() const -> std::size_t { return line_; }
@@ -53,7 +54,6 @@ private:
 	std::size_t curr_ = 0;
 	std::size_t line_ = 1;
 	std::size_t column_ = 1;
-	std::unordered_map<std::size_t, std::size_t> line_lengths_;
 };
 
 template <typename T>
