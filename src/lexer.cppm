@@ -12,6 +12,10 @@ struct token {
 	std::size_t end_column{};
 	std::size_t start_line{};
 	std::size_t end_line{};
+
+	token() = default;
+	token(T type, std::string_view lexeme) : type{type}, lexeme{lexeme} {}
+	token(T type, char lexeme) : type{type}, lexeme{lexeme} {}
 };
 
 constexpr auto end_of_file = char(-1);
