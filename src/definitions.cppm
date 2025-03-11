@@ -121,7 +121,18 @@ const auto number = token_definition<decltype(T)>{
 			ctx.next();
 		}
 		return token{T, lexeme};
-	}
+
+template<auto T>
+const auto identifier = token_definition<decltype(T)>{
+	[](auto ch) { return std::isalpha(ch) || ch == '_'; },
+	[](auto& ctx) -> token_result<decltype(T)> {
+		std::string lexeme;
+		while (std::isalnum(ctx.curr()) || ctx.curr() == '_') {
+			lexeme += ctx.curr();
+			ctx.next();
+		}
+		return token{T, lexeme};
+	},
 };
 
 } // namespace lexer::definitions
