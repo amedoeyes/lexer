@@ -12,6 +12,15 @@ target("lexer", function()
 	add_files("src/**.cppm", { public = true })
 end)
 
-for _, file in ipairs(os.files("examples/**.cpp")) do
-	target(path.basename(file), { files = file, deps = "lexer" })
+option("examples", {
+	description = "Build examples",
+	showmenu = true,
+	default = false,
+	type = "boolean",
+})
+
+if has_config("examples") then
+	for _, example in ipairs(os.files("examples/*.cpp")) do
+		target(path.basename(example), { files = example, deps = "lexer" })
+	end
 end
