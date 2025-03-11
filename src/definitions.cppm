@@ -6,17 +6,17 @@ import :token_definition;
 
 export namespace lexer::definitions {
 
-template <auto T, char Chr>
-const auto single_char_token = token_definition<decltype(T)>{
+template<auto T, char Chr>
+const auto single_char = token_definition<decltype(T)>{
 	[](auto ch) { return ch == Chr; },
 	[](auto& ctx) -> token_result<decltype(T)> {
 		ctx.next();
 		return token{T, std::string{1, Chr}};
-	}
+	},
 };
 
-template <auto T, char First, char... Rest>
-const auto multi_char_token = token_definition<decltype(T)>{
+template<auto T, char First, char... Rest>
+const auto multi_char = token_definition<decltype(T)>{
 	[](auto ch) { return ch == First; },
 	[](auto& ctx) -> token_result<decltype(T)> {
 		constexpr auto str = std::array<char, sizeof...(Rest) + 1>{First, Rest...};
@@ -25,19 +25,18 @@ const auto multi_char_token = token_definition<decltype(T)>{
 			return token{T, std::string{str.data(), str.size()}};
 		}
 		return std::nullopt;
-	}
-};
+	}};
 
-template <typename T>
+template<typename T>
 const auto skip_whitespace = token_definition<T>{
 	[](auto ch) { return std::isspace(ch) != 0; },
 	[](auto& ctx) -> token_result<T> {
 		while (std::isspace(ctx.curr())) ctx.next();
 		return std::nullopt;
-	}
+	},
 };
 
-template <auto T>
+template<auto T>
 const auto boolean = token_definition<decltype(T)>{
 	[](auto ch) { return ch == 't' || ch == 'f'; },
 	[](auto& ctx) -> token_result<decltype(T)> {
@@ -48,26 +47,26 @@ const auto boolean = token_definition<decltype(T)>{
 			}
 		}
 		return std::nullopt;
-	}
+	},
 };
 
-template <auto T>
+template<auto T>
 const auto end_of_file = token_definition<decltype(T)>{
 	[](auto ch) { return ch == lexer::end_of_file; },
 	[](auto&) -> token_result<decltype(T)> { return token{T, ""}; },
 };
 
-template <auto T>
+template<auto T>
 const auto anything = token_definition<decltype(T)>{
 	[](auto) { return true; },
 	[](auto& ctx) -> token_result<decltype(T)> {
 		const auto lexeme = std::string{ctx.curr()};
 		ctx.next();
 		return token{T, lexeme};
-	}
+	},
 };
 
-template <auto T>
+template<auto T>
 const auto string_literal = token_definition<decltype(T)>{
 	[](auto ch) { return ch == '"' || ch == '\''; },
 	[](auto& ctx) -> token_result<decltype(T)> {
@@ -87,13 +86,13 @@ const auto string_literal = token_definition<decltype(T)>{
 				ctx.next();
 			}
 		}
-		if (ctx.curr() != quote_type) return std::unexpected("unterminated string literal");
+		if (ctx.curr() != quote_type) return std::unexpected{"unterminated string literal"};
 		ctx.next();
 		return token{T, lexeme};
-	}
+	},
 };
 
-template <auto T, bool Decimal = true, bool Scientific = true>
+template<auto T, bool Decimal = true, bool Scientific = true>
 const auto number = token_definition<decltype(T)>{
 	[](auto ch) { return std::isdigit(ch) != 0; },
 	[](auto& ctx) -> token_result<decltype(T)> {
@@ -101,7 +100,7 @@ const auto number = token_definition<decltype(T)>{
 		auto has_decimal = false;
 		auto has_exponent = false;
 		while (std::isdigit(ctx.curr()) || (Decimal && ctx.curr() == '.' && !has_decimal)
-					 || (Scientific && (ctx.curr() == 'e' || ctx.curr() == 'E') && !has_exponent)) {
+	         || (Scientific && (ctx.curr() == 'e' || ctx.curr() == 'E') && !has_exponent)) {
 			if (ctx.curr() == '.') {
 				if (has_decimal) break;
 				has_decimal = true;
@@ -121,6 +120,7 @@ const auto number = token_definition<decltype(T)>{
 			ctx.next();
 		}
 		return token{T, lexeme};
+	}};
 
 template<auto T>
 const auto identifier = token_definition<decltype(T)>{

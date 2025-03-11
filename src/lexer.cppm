@@ -2,9 +2,9 @@ export module lexer:lexer;
 
 import std;
 
+import :context;
 import :token;
 import :token_definition;
-import :context;
 
 export namespace lexer {
 
@@ -18,15 +18,17 @@ struct lexer_error {
 template<typename T>
 class lexer {
 public:
-	explicit lexer(const std::string& input) : context_(input) {};
+	explicit lexer(const std::string& input) : context_(input) {}
 
-	auto define_token(const token_definition<T>& definition) -> void { definitions_.emplace_back(definition); }
+	auto define_token(const token_definition<T>& definition) -> void {
+		definitions_.emplace_back(definition);
+	}
 
 	auto define_token(const matcher& matcher, const tokenizer<T>& tokenizer) -> void {
 		definitions_.emplace_back(matcher, tokenizer);
 	}
 
-	auto next_token() -> std::expected<token<T>, std::string> {
+	auto next_token() -> std::expected<token<T>, lexer_error> {
 		for (const auto& def : definitions_) {
 			if (def.matcher(context_.curr())) {
 				const auto start_column = context_.column();

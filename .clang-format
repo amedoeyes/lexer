@@ -3,24 +3,13 @@ Language: Cpp
 Standard: Latest
 
 ColumnLimit: 120
-
-UseTab: Always
+LineEnding: LF
+UseTab: AlignWithSpaces
 TabWidth: 2
-BracedInitializerIndentWidth: 2
-ConstructorInitializerIndentWidth: 2
-ContinuationIndentWidth: 2
-AccessModifierOffset: -2
-
 IndentWidth: 2
-IndentAccessModifiers: false
-IndentCaseLabels: true
-IndentExternBlock: Indent
-IndentGotoLabels: false
-IndentPPDirectives: None
-IndentRequiresClause: true
-IndentWrappedFunctionNames: true
 
-AlignAfterOpenBracket: BlockIndent
+# Align
+AlignAfterOpenBracket: Align
 AlignArrayOfStructures: None
 AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: Consecutive
@@ -31,45 +20,136 @@ AlignConsecutiveShortCaseStatements:
   AcrossEmptyLines: false
   AcrossComments: false
   AlignCaseColons: false
-AlignConsecutiveTableGenBreakingDAGArgColons: None
-AlignConsecutiveTableGenCondOperatorColons: None
-AlignConsecutiveTableGenDefinitionColons: None
 AlignEscapedNewlines: Right
 AlignOperands: AlignAfterOperator
 AlignTrailingComments: Leave
-
-QualifierAlignment: Left
+DerivePointerAlignment: false
 PointerAlignment: Left
-ReferenceAlignment: Pointer
+QualifierAlignment: Left
+ReferenceAlignment: Left
 
+# Line Break
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Empty
-AllowShortCaseExpressionOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortCompoundRequirementOnASingleLine: true
-AllowShortEnumsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: All
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: true
-
-BreakAfterAttributes: Never
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: false
+BinPackParameters: false
+BreakAdjacentStringLiterals: false
+BreakAfterAttributes: Always
 BreakAfterReturnType: Automatic
-BreakArrays: false
-BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBinaryOperators: All
 BreakBeforeBraces: Attach
 BreakBeforeConceptDeclarations: Always
 BreakBeforeInlineASMColon: OnlyMultiline
 BreakBeforeTernaryOperators: true
-# BreakBinaryOperations: OnePerLine
-BreakConstructorInitializers: AfterColon
+BreakConstructorInitializers: BeforeColon
 BreakFunctionDefinitionParameters: false
-BreakInheritanceList: AfterColon
+BreakInheritanceList: BeforeColon
 BreakStringLiterals: true
-BreakTemplateDeclarations: true
-
-BinPackArguments: false
+BreakTemplateDeclarations: Yes
+CompactNamespaces: false
 PackConstructorInitializers: CurrentLine
+RequiresClausePosition: OwnLine
+# AllowShortNamespacesOnASingleLine: true
+# BreakBinaryOperations: OnePerLine
 
+# Indentation
+AccessModifierOffset: -2
+BracedInitializerIndentWidth: 2
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+PPIndentWidth: 2
+
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentExternBlock: NoIndent
+IndentGotoLabels: false
+IndentPPDirectives: None
+IndentRequiresClause: true
+IndentWrappedFunctionNames: true
+LambdaBodyIndentation: Signature
+NamespaceIndentation: None
+RequiresExpressionIndentation: Keyword
+# IndentExportBlock: false
+
+# Insert
+FixNamespaceComments: true
+InsertBraces: false
+InsertNewlineAtEOF: true
+InsertTrailingCommas: Wrapped
+IntegerLiteralSeparator:
+  Binary: 0
+  Decimal: 3
+  DecimalMinDigits: 4
+  Hex: 0
+  HexMinDigits: 4
+
+# Remove
+RemoveParentheses: Leave
+RemoveSemicolon: true
+# RemoveEmptyLinesInUnwrappedLines: true
+
+# Spacing
+BitFieldColonSpacing: Both
+Cpp11BracedListStyle: true
+SeparateDefinitionBlocks: Always
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: Never
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+SpacesInParens: Never
+SpacesInSquareBrackets: false
+
+# Empty Lines
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Always
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+MaxEmptyLinesToKeep: 1
+# KeepFormFeed: false
+# WrapNamespaceBodyWithEmptyLines: Never
+
+# Include
 IncludeBlocks: Regroup
+MainIncludeChar: Quote
+SortIncludes: CaseInsensitive
 
+# Misc
+ShortNamespaceLines: 0
+SkipMacroDefinitionBody: false
+SortUsingDeclarations: Lexicographic
+# ReflowComments: Never
+
+# Panalties
+PenaltyBreakAssignment: 1000
+PenaltyBreakOpenParenthesis: 1000
 PenaltyReturnTypeOnItsOwnLine: 1000
+# PenaltyBreakBeforeMemberAccess: 1000
