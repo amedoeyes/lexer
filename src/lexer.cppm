@@ -8,7 +8,14 @@ import :context;
 
 export namespace lexer {
 
-template <typename T>
+struct lexer_error {
+	std::string msg;
+	char ch;
+	std::size_t line;
+	std::size_t column;
+};
+
+template<typename T>
 class lexer {
 public:
 	explicit lexer(const std::string& input) : context_(input) {};
@@ -25,7 +32,13 @@ public:
 				const auto start_column = context_.column();
 				const auto start_line = context_.line();
 				auto result = def.tokenizer(context_);
-				if (!result) return std::unexpected(result.error());
+				if (!result)
+					return std::unexpected{lexer_error{
+						.msg = result.error(),
+						.ch = context_.curr(),
+						.line = context_.line(),
+						.column = context_.column(),
+					}};
 				auto token = *result;
 				if (token.has_value()) {
 					token->start_line = start_line;
@@ -36,7 +49,12 @@ public:
 				}
 			}
 		}
-		return std::unexpected(std::format("undefined matcher for character '{}'", context_.curr()));
+		return std::unexpected{lexer_error{
+			.msg = "undefined matcher for character",
+			.ch = context_.curr(),
+			.line = context_.line(),
+			.column = context_.column(),
+		}};
 	}
 
 private:
