@@ -9,7 +9,7 @@ import :token_definition;
 export namespace lexer {
 
 struct lexer_error {
-	std::string msg;
+	std::string message;
 	char ch;
 	std::size_t line;
 	std::size_t column;
@@ -36,7 +36,7 @@ public:
 				auto result = def.tokenizer(context_);
 				if (!result)
 					return std::unexpected{lexer_error{
-						.msg = result.error(),
+						.message = result.error(),
 						.ch = context_.curr(),
 						.line = context_.line(),
 						.column = context_.column(),
@@ -52,7 +52,7 @@ public:
 			}
 		}
 		return std::unexpected{lexer_error{
-			.msg = "undefined matcher for character",
+			.message = "undefined matcher for character",
 			.ch = context_.curr(),
 			.line = context_.line(),
 			.column = context_.column(),

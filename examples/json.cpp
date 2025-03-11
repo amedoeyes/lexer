@@ -85,7 +85,7 @@ private:
 		auto result = lexer_.next_token();
 		if (!result) {
 			const auto& error = result.error();
-			return std::unexpected{std::format("{}:{}: {}: '{}'", error.line, error.column, error.msg, error.ch)};
+			return std::unexpected{std::format("{}:{}: {}: '{}'", error.line, error.column, error.message, error.ch)};
 		}
 		token_ = *result;
 		return {};

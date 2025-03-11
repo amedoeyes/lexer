@@ -77,7 +77,7 @@ auto main() -> int {
 		const auto token = lexer.next_token();
 		if (!token) {
 			const auto& error = token.error();
-			std::println(std::cerr, "{}:{}: {}: '{}'", error.line, error.column, error.msg, error.ch);
+			std::println(std::cerr, "{}:{}: {}: '{}'", error.line, error.column, error.message, error.ch);
 			return 1;
 		}
 
@@ -87,7 +87,7 @@ auto main() -> int {
 }
 ```
 
-output:
+Output:
 
 ```
 comment:2:1: '# this is a comment'
