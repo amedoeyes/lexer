@@ -30,7 +30,7 @@ public:
 
 	auto next_token() -> std::expected<token<T>, lexer_error> {
 		for (const auto& def : definitions_) {
-			if (def.matcher(context_.curr())) {
+			if (def.matcher(context_)) {
 				const auto start_column = context_.column();
 				const auto start_line = context_.line();
 				auto result = def.tokenizer(context_);

@@ -39,15 +39,16 @@ x + y
 )";
 
 const auto comment_token = lexer::token_definition<token_type>{
-	[](char ch) { return ch == '#'; },
-	[](lexer::context& ctx) -> lexer::token_result<token_type> {
+	[](auto& ctx) { return ctx.curr() == '#'; },
+	[](auto& ctx) -> lexer::token_result<token_type> {
 		auto lexeme = std::string{};
 		while (ctx.curr() != '\n' && ctx.curr() != lexer::end_of_file) {
 			lexeme += ctx.curr();
 			ctx.next();
 		}
 		return lexer::token{token_type::comment, lexeme};
-	}};
+	},
+};
 
 auto main() -> int {
 	auto lexer = lexer::lexer<token_type>(input);

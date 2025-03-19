@@ -13,7 +13,7 @@ using token_result = std::expected<std::optional<token<T>>, std::string>;
 template<typename T>
 using tokenizer = std::function<token_result<T>(context&)>;
 
-using matcher = std::function<bool(char)>;
+using matcher = std::function<bool(context&)>;
 
 template<typename T>
 struct token_definition {
