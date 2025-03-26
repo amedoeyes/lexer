@@ -1,5 +1,5 @@
 set_project("lexer")
-set_version("1.0.0")
+set_version("2.0.0")
 set_languages("cxx23")
 set_toolchains("clang")
 set_runtimes("c++_shared")
