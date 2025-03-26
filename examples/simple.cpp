@@ -39,7 +39,7 @@ x + y
 )";
 
 const auto comment_token = lexer::token_definition<token_type>{
-	[](auto& ctx) { return ctx.match('#'); },
+	[](const auto& ctx) { return ctx.match('#'); },
 	[](auto& ctx) -> lexer::token_result<token_type> {
 		const auto start = ctx.index();
 		while (!ctx.match('\n') && !ctx.match(lexer::end_of_file)) ctx.next();
