@@ -56,20 +56,20 @@ struct json_object : std::unordered_map<std::string, json_value> {
 
 class json_parser {
 public:
-	explicit json_parser(const std::string& input) : lexer_(input) {
-		lexer_.define_token(lexer::definitions::skip_whitespace<token_type>);
-		lexer_.define_token(lexer::definitions::single_char<token_type::lbrace, '{'>);
-		lexer_.define_token(lexer::definitions::single_char<token_type::rbrace, '}'>);
-		lexer_.define_token(lexer::definitions::single_char<token_type::lbracket, '['>);
-		lexer_.define_token(lexer::definitions::single_char<token_type::rbracket, ']'>);
-		lexer_.define_token(lexer::definitions::single_char<token_type::colon, ':'>);
-		lexer_.define_token(lexer::definitions::single_char<token_type::comma, ','>);
-		lexer_.define_token(lexer::definitions::multi_char<token_type::null, 'n', 'u', 'l', 'l'>);
-		lexer_.define_token(lexer::definitions::boolean<token_type::boolean>);
-		lexer_.define_token(lexer::definitions::string_literal<token_type::string>);
-		lexer_.define_token(lexer::definitions::number<token_type::number>);
-		lexer_.define_token(lexer::definitions::end_of_file<token_type::eof>);
-		lexer_.define_token(lexer::definitions::anything<token_type::unknown>);
+	explicit json_parser(const std::string& input) : lexer_{input} {
+		lexer_.define(lexer::definitions::skip_whitespace<token_type>);
+		lexer_.define(lexer::definitions::single_char<token_type::lbrace, '{'>);
+		lexer_.define(lexer::definitions::single_char<token_type::rbrace, '}'>);
+		lexer_.define(lexer::definitions::single_char<token_type::lbracket, '['>);
+		lexer_.define(lexer::definitions::single_char<token_type::rbracket, ']'>);
+		lexer_.define(lexer::definitions::single_char<token_type::colon, ':'>);
+		lexer_.define(lexer::definitions::single_char<token_type::comma, ','>);
+		lexer_.define(lexer::definitions::multi_char<token_type::null, 'n', 'u', 'l', 'l'>);
+		lexer_.define(lexer::definitions::boolean<token_type::boolean>);
+		lexer_.define(lexer::definitions::string_literal<token_type::string>);
+		lexer_.define(lexer::definitions::number<token_type::number>);
+		lexer_.define(lexer::definitions::end_of_file<token_type::eof>);
+		lexer_.define(lexer::definitions::anything<token_type::unknown>);
 	}
 
 	auto parse() -> std::expected<json_value, std::string> {
@@ -82,7 +82,7 @@ private:
 	lexer::token<token_type> token_;
 
 	auto advance() -> std::expected<void, std::string> {
-		auto result = lexer_.next_token();
+		auto result = lexer_.next();
 		if (!result) {
 			const auto& error = result.error();
 			return std::unexpected{std::format("{}:{}: {}: '{}'", error.line, error.column, error.message, error.ch)};
@@ -97,14 +97,24 @@ private:
 	}
 
 	[[nodiscard]]
-	auto parse_string() const -> json_string {
+	auto match(token_type type) const -> bool {
+		return token_.type == type;
+	}
+
+	[[nodiscard]]
+	auto curr() const -> std::string_view {
 		return token_.lexeme;
+	}
+
+	[[nodiscard]]
+	auto parse_string() const -> json_string {
+		return std::string{curr()};
 	}
 
 	[[nodiscard]]
 	auto parse_number() const -> std::expected<json_number, std::string> {
 		try {
-			return std::stod(token_.lexeme);
+			return std::stod(std::string{curr()});
 		} catch (const std::exception&) {
 			return error("invalid number format");
 		}
@@ -112,7 +122,7 @@ private:
 
 	[[nodiscard]]
 	auto parse_boolean() const -> json_boolean {
-		return token_.lexeme == "true";
+		return curr() == "true";
 	}
 
 	[[nodiscard]]
@@ -124,25 +134,36 @@ private:
 	auto parse_object() -> std::expected<json_object, std::string> {
 		auto object = json_object{};
 		bool expecting_key = true;
+
 		if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
-		while (token_.type != token_type::eof) {
-			if (token_.type == token_type::rbrace) return object;
+
+		while (!match(token_type::eof)) {
+			if (match(token_type::rbrace)) return object;
+
 			if (!expecting_key) return error("expected comma");
-			if (token_.type != token_type::string) return error("expected string key");
-			const auto key = token_.lexeme;
+			if (!match(token_type::string)) return error("expected string key");
+
+			const auto key = std::string{curr()};
+
 			if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
-			if (token_.type != token_type::colon) return error("expected colon");
+
+			if (!match(token_type::colon)) return error("expected colon");
+
 			if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
+
 			const auto value = parse_value();
 			if (!value) return std::unexpected{value.error()};
+
 			object[key] = *value;
-			if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
 			expecting_key = false;
-			if (token_.type == token_type::comma) {
+
+			if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
+			if (match(token_type::comma)) {
 				if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
 				expecting_key = true;
 			}
 		}
+
 		return error("expected closing brace");
 	}
 
@@ -150,20 +171,27 @@ private:
 	auto parse_array() -> std::expected<json_array, std::string> {
 		auto array = json_array{};
 		bool expecting_value = true;
+
 		if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
-		while (token_.type != token_type::eof) {
-			if (token_.type == token_type::rbracket) return array;
+
+		while (!match(token_type::eof)) {
+			if (match(token_type::rbracket)) return array;
+
 			if (!expecting_value) return error("expected comma");
+
 			const auto value = parse_value();
 			if (!value) return std::unexpected{value.error()};
+
 			array.emplace_back(*value);
-			if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
 			expecting_value = false;
-			if (token_.type == token_type::comma) {
+
+			if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
+			if (match(token_type::comma)) {
 				if (const auto adv = advance(); !adv) return std::unexpected{adv.error()};
 				expecting_value = true;
 			}
 		}
+
 		return error("expected closing bracket");
 	}
 
@@ -177,22 +205,23 @@ private:
 		case lbrace: return parse_object();
 		case lbracket: return parse_array();
 		case eof: return error("unexpected end of input");
-		case unknown: return error(std::format("unknown token '{}'", token_.lexeme));
-		default: return error(std::format("unexpected token '{}'", token_.lexeme));
+		case unknown: return error(std::format("unknown token '{}'", curr()));
+		default: return error(std::format("unexpected token '{}'", curr()));
 		}
 	}
 };
 
 void print_json_value(const json_value& value, std::int32_t indent = 0) {
-	auto print_indent = [](int level) {
-		for (int i = 0; i < level; ++i) std::print("  ");
+	auto print_indent = [](auto level) {
+		for (auto _ : std::views::iota(0, level)) std::print("  ");
 	};
+
 	if (std::holds_alternative<json_string>(value)) {
 		std::print("\"{}\"", std::get<json_string>(value));
 	} else if (std::holds_alternative<json_number>(value)) {
 		std::print("{}", std::get<json_number>(value));
 	} else if (std::holds_alternative<json_boolean>(value)) {
-		std::print("{}", std::get<json_boolean>(value) ? "true" : "false");
+		std::print("{}", std::get<json_boolean>(value));
 	} else if (std::holds_alternative<json_null>(value)) {
 		std::print("null");
 	} else if (std::holds_alternative<json_array>(value)) {
@@ -202,7 +231,7 @@ void print_json_value(const json_value& value, std::int32_t indent = 0) {
 			return;
 		}
 		std::println("[");
-		for (std::size_t i = 0; i < arr.size(); ++i) {
+		for (const auto i : std::views::iota(0ul, arr.size())) {
 			print_indent(indent + 1);
 			print_json_value(arr[i], indent + 1);
 			if (i < arr.size() - 1) std::print(",");

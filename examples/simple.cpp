@@ -39,34 +39,31 @@ x + y
 )";
 
 const auto comment_token = lexer::token_definition<token_type>{
-	[](auto& ctx) { return ctx.curr() == '#'; },
+	[](auto& ctx) { return ctx.match('#'); },
 	[](auto& ctx) -> lexer::token_result<token_type> {
-		auto lexeme = std::string{};
-		while (ctx.curr() != '\n' && ctx.curr() != lexer::end_of_file) {
-			lexeme += ctx.curr();
-			ctx.next();
-		}
-		return lexer::token{token_type::comment, lexeme};
+		const auto start = ctx.index();
+		while (!ctx.match('\n') && !ctx.match(lexer::end_of_file)) ctx.next();
+		return lexer::token{token_type::comment, ctx.substr(start, ctx.index() - start)};
 	},
 };
 
 auto main() -> int {
 	auto lexer = lexer::lexer<token_type>(input);
 
-	lexer.define_token(lexer::definitions::skip_whitespace<token_type>);
-	lexer.define_token(lexer::definitions::end_of_file<token_type::eof>);
-	lexer.define_token(lexer::definitions::single_char<token_type::assignment, '='>);
-	lexer.define_token(lexer::definitions::single_char<token_type::plus, '+'>);
-	lexer.define_token(lexer::definitions::single_char<token_type::minus, '-'>);
-	lexer.define_token(lexer::definitions::single_char<token_type::star, '*'>);
-	lexer.define_token(lexer::definitions::single_char<token_type::slash, '/'>);
-	lexer.define_token(lexer::definitions::multi_char<token_type::keyword, 'l', 'e', 't'>);
-	lexer.define_token(lexer::definitions::identifier<token_type::identifier>);
-	lexer.define_token(lexer::definitions::number<token_type::number>);
-	lexer.define_token(comment_token);
+	lexer.define(lexer::definitions::skip_whitespace<token_type>);
+	lexer.define(lexer::definitions::end_of_file<token_type::eof>);
+	lexer.define(lexer::definitions::single_char<token_type::assignment, '='>);
+	lexer.define(lexer::definitions::single_char<token_type::plus, '+'>);
+	lexer.define(lexer::definitions::single_char<token_type::minus, '-'>);
+	lexer.define(lexer::definitions::single_char<token_type::star, '*'>);
+	lexer.define(lexer::definitions::single_char<token_type::slash, '/'>);
+	lexer.define(lexer::definitions::multi_char<token_type::keyword, 'l', 'e', 't'>);
+	lexer.define(lexer::definitions::identifier<token_type::identifier>);
+	lexer.define(lexer::definitions::number<token_type::number>);
+	lexer.define(comment_token);
 
 	while (true) {
-		const auto token = lexer.next_token();
+		const auto token = lexer.next();
 		if (!token) {
 			const auto& error = token.error();
 			std::println(std::cerr, "{}:{}: {}: '{}'", error.line, error.column, error.message, error.ch);
