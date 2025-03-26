@@ -53,7 +53,7 @@ const auto anything = token_definition<decltype(T)>{
 };
 
 template<auto T>
-const auto string_literal = token_definition<decltype(T)>{
+const auto string = token_definition<decltype(T)>{
 	[](const auto& ctx) { return ctx.match('"') || ctx.match('\''); },
 	[](auto& ctx) -> token_result<decltype(T)> {
 		const auto quote_type = ctx.curr();

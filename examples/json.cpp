@@ -66,7 +66,7 @@ public:
 		lexer_.define(lexer::definitions::single_char<token_type::comma, ','>);
 		lexer_.define(lexer::definitions::multi_char<token_type::null, 'n', 'u', 'l', 'l'>);
 		lexer_.define(lexer::definitions::boolean<token_type::boolean>);
-		lexer_.define(lexer::definitions::string_literal<token_type::string>);
+		lexer_.define(lexer::definitions::string<token_type::string>);
 		lexer_.define(lexer::definitions::number<token_type::number>);
 		lexer_.define(lexer::definitions::end_of_file<token_type::eof>);
 		lexer_.define(lexer::definitions::anything<token_type::unknown>);
