@@ -18,7 +18,7 @@ struct lexer_error {
 template<typename T>
 class lexer {
 public:
-	explicit lexer(const std::string& input) : context_{input} {}
+	explicit lexer(const std::string& buffer) : context_{buffer} {}
 
 	lexer() : context_{""} {}
 
@@ -53,8 +53,8 @@ public:
 		return error("undefined matcher for character");
 	}
 
-	auto set_input(const std::string& str) -> void {
-		context_ = context{str};
+	auto set_buffer(const std::string& buffer) -> void {
+		context_ = context{buffer};
 	}
 
 private:
