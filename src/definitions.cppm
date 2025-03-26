@@ -42,7 +42,7 @@ const auto boolean = token_definition<decltype(T)>{
 
 template<auto T>
 const auto end_of_file = token_definition<decltype(T)>{
-	[](const auto& ctx) { return ctx.curr() == lexer::end_of_file; },
+	[](const auto& ctx) { return ctx.match(lexer::end_of_file); },
 	[](auto&) -> token_result<decltype(T)> { return token{T}; },
 };
 
@@ -62,14 +62,14 @@ const auto string_literal = token_definition<decltype(T)>{
 		const auto start = ctx.index();
 
 		while (true) {
-			if (ctx.curr() == lexer::end_of_file) return std::unexpected{"unterminated string literal"};
-			if (ctx.curr() == '\n') return std::unexpected{"newline in string literal"};
+			if (ctx.match(lexer::end_of_file)) return std::unexpected{"unterminated string literal"};
+			if (ctx.match('\n')) return std::unexpected{"newline in string literal"};
 
-			if (ctx.curr() == quote_type) break;
+			if (ctx.match(quote_type)) break;
 
-			if (ctx.curr() == '\\') {
+			if (ctx.match('\\')) {
 				ctx.next();
-				if (ctx.curr() != lexer::end_of_file && ctx.curr() != '\n') ctx.next();
+				if (!ctx.match(lexer::end_of_file) && ctx.match('\n')) ctx.next();
 			} else {
 				ctx.next();
 			}
@@ -91,7 +91,7 @@ const auto number = token_definition<decltype(T)>{
 		while (ctx.match(std::isdigit)) ctx.next();
 
 		if constexpr (Decimal) {
-			if (ctx.curr() == '.') {
+			if (ctx.match('.')) {
 				ctx.next();
 				if (!ctx.match(std::isdigit)) return std::unexpected{"invalid decimal number"};
 				while (ctx.match(std::isdigit)) ctx.next();
@@ -99,9 +99,9 @@ const auto number = token_definition<decltype(T)>{
 		}
 
 		if constexpr (Scientific) {
-			if (ctx.curr() == 'e' || ctx.curr() == 'E') {
+			if (ctx.match('e') || ctx.match('E')) {
 				ctx.next();
-				if (ctx.curr() == '+' || ctx.curr() == '-') ctx.next();
+				if (ctx.match('+') || ctx.match('-')) ctx.next();
 				if (!ctx.match(std::isdigit)) return std::unexpected{"invalid scientific notation"};
 				while (ctx.match(std::isdigit)) ctx.next();
 			}
