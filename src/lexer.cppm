@@ -22,15 +22,16 @@ public:
 
 	lexer() : context_{""} {}
 
-	auto define_token(const token_definition<T>& definition) -> void {
+	auto define(const token_definition<T>& definition) -> void {
 		definitions_.emplace_back(definition);
 	}
 
-	auto define_token(const matcher& matcher, const tokenizer<T>& tokenizer) -> void {
+	auto define(const matcher& matcher, const tokenizer<T>& tokenizer) -> void {
 		definitions_.emplace_back(matcher, tokenizer);
 	}
 
-	auto next_token() -> std::expected<token<T>, lexer_error> {
+	[[nodiscard]]
+	auto next() -> std::expected<token<T>, lexer_error> {
 		for (const auto& def : definitions_) {
 			if (def.matcher(context_)) {
 				const auto start_column = context_.column();
