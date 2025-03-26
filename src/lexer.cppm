@@ -36,16 +36,11 @@ public:
 			if (def.matcher(context_)) {
 				const auto start_column = context_.column();
 				const auto start_line = context_.line();
+
 				auto result = def.tokenizer(context_);
-				if (!result)
-					return std::unexpected{lexer_error{
-						.message = result.error(),
-						.ch = context_.curr(),
-						.line = context_.line(),
-						.column = context_.column(),
-					}};
-				auto token = *result;
-				if (token.has_value()) {
+				if (!result) return error(result.error());
+
+				if (auto token = *result; token) {
 					token->start_line = start_line;
 					token->start_column = start_column;
 					token->end_column = context_.column() - 1;
@@ -54,12 +49,8 @@ public:
 				}
 			}
 		}
-		return std::unexpected{lexer_error{
-			.message = "undefined matcher for character",
-			.ch = context_.curr(),
-			.line = context_.line(),
-			.column = context_.column(),
-		}};
+
+		return error("undefined matcher for character");
 	}
 
 	auto set_input(const std::string& str) -> void {
@@ -69,6 +60,15 @@ public:
 private:
 	context context_;
 	std::vector<token_definition<T>> definitions_;
+
+	auto error(std::string_view msg) -> std::unexpected<lexer_error> {
+		return std::unexpected{lexer_error{
+			.message = std::string{msg},
+			.ch = context_.curr(),
+			.line = context_.line(),
+			.column = context_.column(),
+		}};
+	}
 };
 
 } // namespace lexer
