@@ -18,7 +18,9 @@ struct lexer_error {
 template<typename T>
 class lexer {
 public:
-	explicit lexer(const std::string& input) : context_(input) {}
+	explicit lexer(const std::string& input) : context_{input} {}
+
+	lexer() : context_{""} {}
 
 	auto define_token(const token_definition<T>& definition) -> void {
 		definitions_.emplace_back(definition);
@@ -57,6 +59,10 @@ public:
 			.line = context_.line(),
 			.column = context_.column(),
 		}};
+	}
+
+	auto set_input(const std::string& str) -> void {
+		context_ = context{str};
 	}
 
 private:
