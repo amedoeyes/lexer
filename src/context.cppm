@@ -8,11 +8,11 @@ constexpr auto end_of_file = char(-1);
 
 class context {
 public:
-	explicit context(std::string buffer) : buffer{std::move(buffer)} {}
+	explicit context(std::string buffer) : buffer_{std::move(buffer)} {}
 
 	auto next(std::size_t n = 1) -> void {
-		for (; n > 0 && curr_ < this->buffer.size(); --n, ++curr_) {
-			if (this->buffer[curr_] == '\n') {
+		for (; n > 0 && curr_ < buffer_.size(); --n, ++curr_) {
+			if (buffer_[curr_] == '\n') {
 				++line_;
 				column_ = 1;
 			} else {
@@ -23,9 +23,9 @@ public:
 
 	auto prev(std::size_t n = 1) -> void {
 		for (; n > 0 && curr_ > 0; --n, --curr_) {
-			if (this->buffer[curr_ - 1] == '\n') {
+			if (buffer_[curr_ - 1] == '\n') {
 				--line_;
-				column_ = (line_ == 1) ? curr_ : (curr_ - this->buffer.rfind('\n', curr_ - 2));
+				column_ = (line_ == 1) ? curr_ : (curr_ - buffer_.rfind('\n', curr_ - 2));
 			} else {
 				--column_;
 			}
@@ -34,7 +34,7 @@ public:
 
 	[[nodiscard]]
 	auto curr() const -> char {
-		return curr_ < this->buffer.size() ? this->buffer[curr_] : end_of_file;
+		return curr_ < buffer_.size() ? buffer_[curr_] : end_of_file;
 	}
 
 	[[nodiscard]]
@@ -43,19 +43,19 @@ public:
 	}
 
 	[[nodiscard]]
-	auto substr(std::size_t start, std::size_t end) const -> std::string_view {
-		return std::string_view(this->buffer).substr(start, end);
+	auto substr(std::size_t pos, std::size_t n) const -> std::string_view {
+		return std::string_view(buffer_).substr(pos, n);
 	}
 
 	[[nodiscard]]
-	auto substr(std::size_t end) const -> std::string_view {
-		return substr(curr_, end);
+	auto substr(std::size_t n) const -> std::string_view {
+		return substr(curr_, n);
 	}
 
 	[[nodiscard]]
-	auto extract(std::size_t length) -> std::string_view {
-		auto result = substr(length);
-		next(length);
+	auto extract(std::size_t n) -> std::string_view {
+		auto result = substr(n);
+		next(n);
 		return result;
 	}
 
@@ -98,7 +98,7 @@ public:
 	}
 
 private:
-	std::string buffer;
+	std::string buffer_;
 	std::size_t curr_ = 0;
 	std::size_t line_ = 1;
 	std::size_t column_ = 1;

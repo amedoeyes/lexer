@@ -18,9 +18,9 @@ struct lexer_error {
 template<typename T>
 class lexer {
 public:
-	explicit lexer(const std::string& buffer) : context_{buffer} {}
-
 	lexer() : context_{""} {}
+
+	explicit lexer(const std::string& buffer) : context_{buffer} {}
 
 	auto define(const token_definition<T>& definition) -> void {
 		definitions_.emplace_back(definition);
@@ -62,12 +62,14 @@ private:
 	std::vector<token_definition<T>> definitions_;
 
 	auto error(std::string_view msg) -> std::unexpected<lexer_error> {
-		return std::unexpected{lexer_error{
-			.message = std::string{msg},
-			.ch = context_.curr(),
-			.line = context_.line(),
-			.column = context_.column(),
-		}};
+		return std::unexpected{
+			lexer_error{
+				.message = std::string{msg},
+				.ch = context_.curr(),
+				.line = context_.line(),
+				.column = context_.column(),
+			},
+		};
 	}
 };
 
