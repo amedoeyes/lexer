@@ -13,6 +13,7 @@ public:
 	auto next(std::size_t n = 1) -> void {
 		for (; n > 0 && curr_ < buffer_.size(); --n, ++curr_) {
 			if (buffer_[curr_] == '\n') {
+				line_widths_[line_] = column_;
 				++line_;
 				column_ = 1;
 			} else {
@@ -25,7 +26,7 @@ public:
 		for (; n > 0 && curr_ > 0; --n, --curr_) {
 			if (buffer_[curr_ - 1] == '\n') {
 				--line_;
-				column_ = (line_ == 1) ? curr_ : (curr_ - buffer_.rfind('\n', curr_ - 2));
+				column_ = line_widths_[line_];
 			} else {
 				--column_;
 			}
@@ -102,6 +103,7 @@ private:
 	std::size_t curr_ = 0;
 	std::size_t line_ = 1;
 	std::size_t column_ = 1;
+	std::unordered_map<std::size_t, std::size_t> line_widths_;
 };
 
 } // namespace lexer
