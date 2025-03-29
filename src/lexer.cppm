@@ -20,7 +20,7 @@ class lexer {
 public:
 	lexer() : context_{""} {}
 
-	explicit lexer(const std::string& buffer) : context_{buffer} {}
+	explicit lexer(std::string_view buffer) : context_{buffer} {}
 
 	auto define(const token_definition<T>& definition) -> void {
 		definitions_.emplace_back(definition);
@@ -53,7 +53,7 @@ public:
 		return error("undefined matcher for character");
 	}
 
-	auto set_buffer(const std::string& buffer) -> void {
+	auto set_buffer(std::string_view buffer) -> void {
 		context_ = context{buffer};
 	}
 

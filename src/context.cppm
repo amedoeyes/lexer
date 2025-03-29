@@ -8,7 +8,7 @@ constexpr auto end_of_file = char(-1);
 
 class context {
 public:
-	explicit context(std::string buffer) : buffer_{std::move(buffer)} {}
+	explicit context(std::string_view buffer) : buffer_{buffer} {}
 
 	auto next(std::size_t n = 1) -> void {
 		for (; n > 0 && curr_ < buffer_.size(); --n, ++curr_) {
@@ -45,7 +45,7 @@ public:
 
 	[[nodiscard]]
 	auto substr(std::size_t pos, std::size_t n) const -> std::string_view {
-		return std::string_view(buffer_).substr(pos, n);
+		return buffer_.substr(pos, n);
 	}
 
 	[[nodiscard]]
@@ -99,7 +99,7 @@ public:
 	}
 
 private:
-	std::string buffer_;
+	std::string_view buffer_;
 	std::size_t curr_ = 0;
 	std::size_t line_ = 1;
 	std::size_t column_ = 1;
