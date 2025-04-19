@@ -20,13 +20,13 @@ struct token_definition {
 	matcher matcher;
 	tokenizer<T> tokenizer;
 
-	token_definition() = default;
+	token_definition() noexcept = default;
 
-	token_definition(lexer::matcher matcher, lexer::tokenizer<T> tokenizer)
+	token_definition(lexer::matcher matcher, lexer::tokenizer<T> tokenizer) noexcept
 		: matcher{std::move(matcher)},
 		  tokenizer{std::move(tokenizer)} {}
 
-	auto operator+(const token_definition& rhs) const -> token_definition {
+	auto operator+(const token_definition& rhs) const noexcept -> token_definition {
 		return token_definition{
 			[this, rhs](const auto& ctx) -> bool { return matcher(ctx) || rhs.matcher(ctx); },
 			[this, rhs](auto& ctx) -> token_result<T> {

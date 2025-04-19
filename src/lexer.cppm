@@ -20,18 +20,18 @@ class lexer {
 public:
 	lexer() : context_{""} {}
 
-	explicit lexer(std::string_view buffer) : context_{buffer} {}
+	explicit lexer(std::string_view buffer) noexcept : context_{buffer} {}
 
-	auto define(const token_definition<T>& definition) -> void {
+	auto define(const token_definition<T>& definition) noexcept -> void {
 		definitions_.emplace_back(definition);
 	}
 
-	auto define(const matcher& matcher, const tokenizer<T>& tokenizer) -> void {
+	auto define(const matcher& matcher, const tokenizer<T>& tokenizer) noexcept -> void {
 		definitions_.emplace_back(matcher, tokenizer);
 	}
 
 	[[nodiscard]]
-	auto next() -> std::expected<token<T>, lexer_error> {
+	auto next() noexcept -> std::expected<token<T>, lexer_error> {
 		for (const auto& def : definitions_) {
 			if (def.matcher(context_)) {
 				const auto start_column = context_.column();
@@ -53,7 +53,7 @@ public:
 		return error("undefined matcher for character");
 	}
 
-	auto set_buffer(std::string_view buffer) -> void {
+	auto set_buffer(std::string_view buffer) noexcept -> void {
 		context_ = context{buffer};
 	}
 
@@ -61,7 +61,7 @@ private:
 	context context_;
 	std::vector<token_definition<T>> definitions_;
 
-	auto error(std::string_view msg) -> std::unexpected<lexer_error> {
+	auto error(std::string_view msg) noexcept -> std::unexpected<lexer_error> {
 		return std::unexpected{
 			lexer_error{
 				.message = std::string{msg},

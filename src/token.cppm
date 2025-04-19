@@ -13,11 +13,11 @@ struct token {
 	std::size_t start_line{};
 	std::size_t end_line{};
 
-	token() = default;
+	token() noexcept = default;
 
-	explicit token(T type) : type{type} {}
+	explicit token(T type) noexcept : type{type} {}
 
-	token(T type, std::string_view lexeme) : type{type}, lexeme{lexeme} {}
+	token(T type, std::string_view lexeme) noexcept : type{type}, lexeme{lexeme} {}
 };
 
 } // namespace lexer
