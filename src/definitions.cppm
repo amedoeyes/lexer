@@ -26,41 +26,52 @@ const auto keyword = token_definition<decltype(T)>{
 	[](const auto& ctx) {
 		static constexpr auto arr = std::array{Str...};
 		static constexpr auto sv = std::string_view{arr.data(), arr.size()};
-		if(!ctx.match(sv)) return false;
+		if (!ctx.match(sv)) return false;
 		const auto next_ch = ctx.get(ctx.index() + sv.size());
 		return !std::isalnum(static_cast<unsigned char>(next_ch)) && next_ch != '_';
 	},
 	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(sizeof...(Str))}; }};
 
-template<typename T>
-const auto skip_whitespace = token_definition<T>{
-	[](const auto& ctx) { return ctx.match(std::isspace); },
-	[](auto& ctx) -> token_result<T> {
-		while (ctx.match(std::isspace)) ctx.next();
-		return std::nullopt;
-	},
-};
-
 template<auto T>
-const auto boolean = token_definition<decltype(T)>{
-	[](const auto& ctx) { return ctx.match("true") || ctx.match("false"); },
+const auto identifier = token_definition<decltype(T)>{
+	[](const auto& ctx) { return ctx.match(std::isalpha) || ctx.match('_'); },
 	[](auto& ctx) -> token_result<decltype(T)> {
-		if (const auto sv = ctx.extract_if("true"); sv) return token{T, *sv};
-		if (const auto sv = ctx.extract_if("false"); sv) return token{T, *sv};
-		return std::nullopt;
+		const auto start = ctx.index();
+		while (ctx.match(std::isalnum) || ctx.match('_')) ctx.next();
+		return token{T, ctx.substr(start, ctx.index() - start)};
 	},
 };
 
 template<auto T>
-const auto end_of_file = token_definition<decltype(T)>{
-	[](const auto& ctx) { return ctx.match(lexer::end_of_file); },
-	[](auto&) -> token_result<decltype(T)> { return token{T}; },
-};
+const auto boolean = keyword<T, 't', 'r', 'u', 'e'> + keyword<T, 'f', 'a', 'l', 's', 'e'>;
 
-template<auto T>
-const auto anything = token_definition<decltype(T)>{
-	[](const auto&) { return true; },
-	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(1)}; },
+template<auto T, bool Decimal = true, bool Scientific = true>
+const auto number = token_definition<decltype(T)>{
+	[](const auto& ctx) { return ctx.match(std::isdigit); },
+	[](auto& ctx) -> token_result<decltype(T)> {
+		const auto start = ctx.index();
+
+		while (ctx.match(std::isdigit)) ctx.next();
+
+		if constexpr (Decimal) {
+			if (ctx.match('.')) {
+				ctx.next();
+				if (!ctx.match(std::isdigit)) return std::unexpected{"invalid decimal number"};
+				while (ctx.match(std::isdigit)) ctx.next();
+			}
+		}
+
+		if constexpr (Scientific) {
+			if (ctx.match('e') || ctx.match('E')) {
+				ctx.next();
+				if (ctx.match('+') || ctx.match('-')) ctx.next();
+				if (!ctx.match(std::isdigit)) return std::unexpected{"invalid scientific notation"};
+				while (ctx.match(std::isdigit)) ctx.next();
+			}
+		}
+
+		return token{T, ctx.substr(start, ctx.index() - start)};
+	},
 };
 
 template<auto T>
@@ -93,43 +104,22 @@ const auto string = token_definition<decltype(T)>{
 	},
 };
 
-template<auto T, bool Decimal = true, bool Scientific = true>
-const auto number = token_definition<decltype(T)>{
-	[](const auto& ctx) { return ctx.match(std::isdigit); },
-	[](auto& ctx) -> token_result<decltype(T)> {
-		const auto start = ctx.index();
-
-		while (ctx.match(std::isdigit)) ctx.next();
-
-		if constexpr (Decimal) {
-			if (ctx.match('.')) {
-				ctx.next();
-				if (!ctx.match(std::isdigit)) return std::unexpected{"invalid decimal number"};
-				while (ctx.match(std::isdigit)) ctx.next();
-			}
-		}
-
-		if constexpr (Scientific) {
-			if (ctx.match('e') || ctx.match('E')) {
-				ctx.next();
-				if (ctx.match('+') || ctx.match('-')) ctx.next();
-				if (!ctx.match(std::isdigit)) return std::unexpected{"invalid scientific notation"};
-				while (ctx.match(std::isdigit)) ctx.next();
-			}
-		}
-
-		return token{T, ctx.substr(start, ctx.index() - start)};
+template<typename T>
+const auto skip_whitespace = token_definition<T>{
+	[](const auto& ctx) { return ctx.match(std::isspace); },
+	[](auto& ctx) -> token_result<T> {
+		while (ctx.match(std::isspace)) ctx.next();
+		return std::nullopt;
 	},
 };
 
 template<auto T>
-const auto identifier = token_definition<decltype(T)>{
-	[](const auto& ctx) { return ctx.match(std::isalpha) || ctx.match('_'); },
-	[](auto& ctx) -> token_result<decltype(T)> {
-		const auto start = ctx.index();
-		while (ctx.match(std::isalnum) || ctx.match('_')) ctx.next();
-		return token{T, ctx.substr(start, ctx.index() - start)};
-	},
+const auto end_of_file = single_char<T, lexer::end_of_file>;
+
+template<auto T>
+const auto anything = token_definition<decltype(T)>{
+	[](const auto&) { return true; },
+	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(1)}; },
 };
 
 } // namespace lexer::definitions

@@ -25,6 +25,16 @@ struct token_definition {
 	token_definition(lexer::matcher matcher, lexer::tokenizer<T> tokenizer)
 		: matcher{std::move(matcher)},
 		  tokenizer{std::move(tokenizer)} {}
+
+	auto operator+(const token_definition& rhs) const -> token_definition {
+		return token_definition{
+			[this, rhs](const auto& ctx) -> bool { return matcher(ctx) || rhs.matcher(ctx); },
+			[this, rhs](auto& ctx) -> token_result<T> {
+				if (matcher(ctx)) return tokenizer(ctx);
+				return rhs.tokenizer(ctx);
+			},
+		};
+	}
 };
 
 } // namespace lexer
