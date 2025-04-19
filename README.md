@@ -9,6 +9,7 @@ Simple example:
 ```cpp
 import std;
 import lexer;
+import lexer.definitions;
 
 enum class token_type : std::uint8_t {
 	assignment,
@@ -26,17 +27,16 @@ enum class token_type : std::uint8_t {
 auto token_name(token_type token) -> std::string {
 	switch (token) {
 		using enum token_type;
-	case assignment: return "assignment";
-	case plus: return "plus";
-	case minus: return "minus";
-	case star: return "star";
-	case slash: return "slash";
-	case identifier: return "identifier";
-	case number: return "number";
-	case keyword: return "keyword";
-	case comment: return "comment";
-	case eof: return "eof";
-	default: std::unreachable();
+		case assignment: return "assignment";
+		case plus:       return "plus";
+		case minus:      return "minus";
+		case star:       return "star";
+		case slash:      return "slash";
+		case identifier: return "identifier";
+		case number:     return "number";
+		case keyword:    return "keyword";
+		case comment:    return "comment";
+		case eof:        return "eof";
 	}
 }
 
@@ -66,7 +66,7 @@ auto main() -> int {
 	lexer.define(lexer::definitions::single_char<token_type::minus, '-'>);
 	lexer.define(lexer::definitions::single_char<token_type::star, '*'>);
 	lexer.define(lexer::definitions::single_char<token_type::slash, '/'>);
-	lexer.define(lexer::definitions::multi_char<token_type::keyword, 'l', 'e', 't'>);
+	lexer.define(lexer::definitions::keyword<token_type::keyword, 'l', 'e', 't'>);
 	lexer.define(lexer::definitions::identifier<token_type::identifier>);
 	lexer.define(lexer::definitions::number<token_type::number>);
 	lexer.define(comment_token);
