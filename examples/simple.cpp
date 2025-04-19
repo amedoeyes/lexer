@@ -56,7 +56,7 @@ auto main() -> int {
 	lexer.define(lexer::definitions::single_char<token_type::minus, '-'>);
 	lexer.define(lexer::definitions::single_char<token_type::star, '*'>);
 	lexer.define(lexer::definitions::single_char<token_type::slash, '/'>);
-	lexer.define(lexer::definitions::multi_char<token_type::keyword, 'l', 'e', 't'>);
+	lexer.define(lexer::definitions::keyword<token_type::keyword, 'l', 'e', 't'>);
 	lexer.define(lexer::definitions::identifier<token_type::identifier>);
 	lexer.define(lexer::definitions::number<token_type::number>);
 	lexer.define(comment_token);

@@ -39,6 +39,11 @@ public:
 	}
 
 	[[nodiscard]]
+	auto get(std::size_t index) const -> char {
+		return index < buffer_.size() ? buffer_[index] : end_of_file;
+	}
+
+	[[nodiscard]]
 	auto index() const -> std::size_t {
 		return curr_;
 	}

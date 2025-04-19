@@ -21,6 +21,17 @@ const auto multi_char = token_definition<decltype(T)>{
 	},
 	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(sizeof...(Str))}; }};
 
+template<auto T, char... Str>
+const auto keyword = token_definition<decltype(T)>{
+	[](const auto& ctx) {
+		static constexpr auto arr = std::array{Str...};
+		static constexpr auto sv = std::string_view{arr.data(), arr.size()};
+		if(!ctx.match(sv)) return false;
+		const auto next_ch = ctx.get(ctx.index() + sv.size());
+		return !std::isalnum(static_cast<unsigned char>(next_ch)) && next_ch != '_';
+	},
+	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(sizeof...(Str))}; }};
+
 template<typename T>
 const auto skip_whitespace = token_definition<T>{
 	[](const auto& ctx) { return ctx.match(std::isspace); },
