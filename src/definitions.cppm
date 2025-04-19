@@ -1,8 +1,8 @@
-export module lexer:definitions;
+export module lexer.definitions;
 
 import std;
 
-import :token_definition;
+import lexer;
 
 export namespace lexer::definitions {
 
@@ -39,6 +39,24 @@ const auto identifier = token_definition<decltype(T)>{
 		const auto start = ctx.index();
 		while (ctx.match(std::isalnum) || ctx.match('_')) ctx.next();
 		return token{T, ctx.substr(start, ctx.index() - start)};
+	},
+};
+
+template<auto T>
+const auto end_of_file = single_char<T, ::lexer::end_of_file>;
+
+template<auto T>
+const auto anything = token_definition<decltype(T)>{
+	[](const auto&) { return true; },
+	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(1)}; },
+};
+
+template<typename T>
+const auto skip_whitespace = token_definition<T>{
+	[](const auto& ctx) { return ctx.match(std::isspace); },
+	[](auto& ctx) -> token_result<T> {
+		while (ctx.match(std::isspace)) ctx.next();
+		return std::nullopt;
 	},
 };
 
@@ -84,14 +102,14 @@ const auto string = token_definition<decltype(T)>{
 		const auto start = ctx.index();
 
 		while (true) {
-			if (ctx.match(lexer::end_of_file)) return std::unexpected{"unterminated string literal"};
+			if (ctx.match(::lexer::end_of_file)) return std::unexpected{"unterminated string literal"};
 			if (ctx.match('\n')) return std::unexpected{"newline in string literal"};
 
 			if (ctx.match(quote_type)) break;
 
 			if (ctx.match('\\')) {
 				ctx.next();
-				if (!ctx.match(lexer::end_of_file) && ctx.match('\n')) ctx.next();
+				if (!ctx.match(::lexer::end_of_file) && ctx.match('\n')) ctx.next();
 			} else {
 				ctx.next();
 			}
@@ -102,24 +120,6 @@ const auto string = token_definition<decltype(T)>{
 
 		return token{T, ctx.substr(start, end - start)};
 	},
-};
-
-template<typename T>
-const auto skip_whitespace = token_definition<T>{
-	[](const auto& ctx) { return ctx.match(std::isspace); },
-	[](auto& ctx) -> token_result<T> {
-		while (ctx.match(std::isspace)) ctx.next();
-		return std::nullopt;
-	},
-};
-
-template<auto T>
-const auto end_of_file = single_char<T, lexer::end_of_file>;
-
-template<auto T>
-const auto anything = token_definition<decltype(T)>{
-	[](const auto&) { return true; },
-	[](auto& ctx) -> token_result<decltype(T)> { return token{T, ctx.extract(1)}; },
 };
 
 } // namespace lexer::definitions

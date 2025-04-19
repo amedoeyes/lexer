@@ -1,5 +1,6 @@
 import std;
 import lexer;
+import lexer.definitions;
 
 enum class token_type : std::uint8_t {
 	lbrace,
