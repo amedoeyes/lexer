@@ -24,7 +24,7 @@ struct token_definition {
 
 	token_definition(lexer::matcher matcher, lexer::tokenizer<T> tokenizer)
 		: matcher{std::move(matcher)},
-			tokenizer{std::move(tokenizer)} {}
+		  tokenizer{std::move(tokenizer)} {}
 };
 
 } // namespace lexer

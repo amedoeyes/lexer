@@ -21,19 +21,19 @@ enum class token_type : std::uint8_t {
 auto token_name(token_type token) -> std::string {
 	switch (token) {
 		using enum token_type;
-	case lbrace: return "lbrace";
-	case rbrace: return "rbrace";
-	case lbracket: return "lbracket";
-	case rbracket: return "rbracket";
-	case colon: return "colon";
-	case comma: return "comma";
-	case string: return "string";
-	case number: return "number";
-	case boolean: return "boolean";
-	case null: return "null";
-	case eof: return "eof";
-	case unknown: return "unknown";
-	default: std::unreachable();
+		case lbrace:   return "lbrace";
+		case rbrace:   return "rbrace";
+		case lbracket: return "lbracket";
+		case rbracket: return "rbracket";
+		case colon:    return "colon";
+		case comma:    return "comma";
+		case string:   return "string";
+		case number:   return "number";
+		case boolean:  return "boolean";
+		case null:     return "null";
+		case eof:      return "eof";
+		case unknown:  return "unknown";
+		default:       std::unreachable();
 	}
 }
 
@@ -57,15 +57,15 @@ public:
 	auto parse() -> std::expected<json, std::string> {
 		switch (token().type) {
 			using enum token_type;
-		case string: return parse_string();
-		case number: return parse_number();
-		case boolean: return parse_boolean();
-		case null: return parse_null();
-		case lbrace: return parse_object();
-		case lbracket: return parse_array();
-		case eof: return error("unexpected end of input");
-		case unknown: return error(std::format("unknown token '{}'", lexeme()));
-		default: return error(std::format("unexpected token '{}'", lexeme()));
+			case string:   return parse_string();
+			case number:   return parse_number();
+			case boolean:  return parse_boolean();
+			case null:     return parse_null();
+			case lbrace:   return parse_object();
+			case lbracket: return parse_array();
+			case eof:      return error("unexpected end of input");
+			case unknown:  return error(std::format("unknown token '{}'", lexeme()));
+			default:       return error(std::format("unexpected token '{}'", lexeme()));
 		}
 	}
 

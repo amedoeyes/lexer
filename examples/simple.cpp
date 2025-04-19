@@ -17,17 +17,16 @@ enum class token_type : std::uint8_t {
 auto token_name(token_type token) -> std::string {
 	switch (token) {
 		using enum token_type;
-	case assignment: return "assignment";
-	case plus: return "plus";
-	case minus: return "minus";
-	case star: return "star";
-	case slash: return "slash";
-	case identifier: return "identifier";
-	case number: return "number";
-	case keyword: return "keyword";
-	case comment: return "comment";
-	case eof: return "eof";
-	default: std::unreachable();
+		case assignment: return "assignment";
+		case plus:       return "plus";
+		case minus:      return "minus";
+		case star:       return "star";
+		case slash:      return "slash";
+		case identifier: return "identifier";
+		case number:     return "number";
+		case keyword:    return "keyword";
+		case comment:    return "comment";
+		case eof:        return "eof";
 	}
 }
 
