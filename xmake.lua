@@ -10,6 +10,25 @@ add_rules("plugin.compile_commands.autoupdate", { lsp = "clangd", outputdir = "b
 target("lexer", function()
 	set_kind("static")
 	add_files("src/**.cppm", { public = true })
+	add_cxxflags(
+		"-Weverything",
+		"-Wno-c++98-compat",
+		"-Wno-c++98-compat-pedantic",
+		"-Wno-ctad-maybe-unsupported",
+		"-Wno-exit-time-destructors",
+		"-Wno-float-equal",
+		"-Wno-global-constructors",
+		"-Wno-missing-designated-field-initializers",
+		"-Wno-missing-prototypes",
+		"-Wno-missing-variable-declarations", -- dosen't work with modules
+		"-Wno-padded",
+		"-Wno-reserved-identifier", --doesn't work with modules
+		"-Wno-shadow-field-in-constructor",
+		"-Wno-switch-default",
+		"-Wno-switch-enum",
+		"-Wno-unsafe-buffer-usage-in-container",
+		"-Wno-weak-vtables"
+	)
 end)
 
 option("examples", {
